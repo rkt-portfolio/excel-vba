@@ -1,0 +1,3 @@
+'code to find the string in a specific column
+Columns(26).Select
+ee = Columns(26).Find(what:=entity, After:=ActiveCell, LookIn:=xlFormulas, LookAt:=xlWhole).Row
