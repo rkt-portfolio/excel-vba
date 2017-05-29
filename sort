@@ -1,0 +1,11 @@
+ActiveWorkbook.Worksheets("Ytd").Sort.SortFields.Clear
+    ActiveWorkbook.Worksheets("Ytd").Sort.SortFields.Add Key:=Range("A:A"), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+    ActiveWorkbook.Worksheets("Ytd").Sort.SortFields.Add Key:=Range("B:B"), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortTextAsNumbers
+    With ActiveWorkbook.Worksheets("Ytd").Sort
+        .SetRange Range("A:F")
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
