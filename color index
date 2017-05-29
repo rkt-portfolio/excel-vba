@@ -1,0 +1,38 @@
+ blue-
+
+
+With Selection.Interior
+        .Color = 6299648
+End With
+
+
+green-
+
+    With Selection.Interior
+        .Pattern = xlSolid
+        .PatternColorIndex = xlAutomatic
+        .ThemeColor = xlThemeColorAccent6
+        .TintAndShade = 0.399975585192419
+        .PatternTintAndShade = 0
+    End With
+    
+
+golden yellow-
+ 
+ 
+    With Selection.Interior
+        .Pattern = xlSolid
+        .PatternColorIndex = xlAutomatic
+        .ThemeColor = xlThemeColorAccent4
+        .TintAndShade = 0.599993896298105
+        .PatternTintAndShade = 0
+    End With
+    
+
+
+White font
+
+    With Selection.Font
+        .ThemeColor = xlThemeColorDark1
+        .TintAndShade = 0
+    End With
