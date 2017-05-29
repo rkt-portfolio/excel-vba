@@ -1,0 +1,7 @@
+'code to update the font, size and zoom    
+    Cells.Select
+    Selection.Columns.AutoFit
+    ActiveWindow.Zoom = 80
+    With Selection.Font
+            .Name = "Calibri": .Size = 11
+    End With
