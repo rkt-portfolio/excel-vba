@@ -1,0 +1,84 @@
+'' create different charts
+Sub CHARTS()
+
+LAST_ROW1 = Range("AR1048576").End(xlUp).Row
+
+'''CHART-2 : FLAGGED AMOUNT
+
+    With ActiveSheet.ChartObjects.Add(Left:=50, Width:=375, Top:=525, Height:=225)
+    With .Chart
+        .ChartType = xlXYScatter
+        .SetSourceData Source:=Range("AS1:AT" & LAST_ROW1)
+        .Parent.Name = "Chart 3"
+        .HasTitle = True
+        .ChartTitle.Text = "Entries Vs Flagged Amount"
+        .Axes(xlValue).DisplayUnit = xlMillions
+        .Axes(xlValue).DisplayUnitLabel.Caption = "Debit (in M)"
+        .Axes(xlValue).TickLabels.NumberFormat = "General"
+        .Axes(xlCategory).DisplayUnit = xlMillions
+        .Axes(xlCategory).TickLabels.NumberFormat = "General"
+        .Axes(xlCategory).DisplayUnitLabel.Caption = "Credit (in M)"
+        .ClearToMatchStyle
+        .Legend.DELETE
+        .ChartStyle = 209
+    End With
+            
+    End With
+    ActiveSheet.ChartObjects("Chart 3").Activate
+    ActiveChart.FullSeriesCollection(1).Select
+    ActiveChart.FullSeriesCollection(1).ApplyDataLabels
+    ActiveChart.FullSeriesCollection(1).DataLabels.Select
+'    SELECTION.ShowValue = False
+    ActiveChart.SeriesCollection(1).DataLabels.Format.TextFrame2.TextRange. _
+        InsertChartField msoChartFieldRange, "=Interface!AR2:AR" & LAST_ROW1, 0
+    SELECTION.ShowRange = True
+    SELECTION.Position = xlLabelPositionRight
+    
+
+''''CHART-3 : TRANSACTION AMOUNT
+
+    With ActiveSheet.ChartObjects.Add(Left:=500, Width:=375, Top:=525, Height:=225)
+    With .Chart
+        .ChartType = xlXYScatter
+        .SetSourceData Source:=Range("AW1:AX" & LAST_ROW1)
+        .Parent.Name = "Chart 4"
+        .HasTitle = True
+        .ChartTitle.Text = "Entries Vs Transaction Amount"
+        .Axes(xlValue).DisplayUnit = xlMillions
+        .Axes(xlValue).DisplayUnitLabel.Caption = "Debit (in M)"
+        .Axes(xlValue).TickLabels.NumberFormat = "General"
+        .Axes(xlCategory).DisplayUnit = xlMillions
+        .Axes(xlCategory).TickLabels.NumberFormat = "General"
+        .Axes(xlCategory).DisplayUnitLabel.Caption = "Credit (in M)"
+        .ClearToMatchStyle
+        .Legend.DELETE
+        .ChartStyle = 209
+    End With
+            
+    End With
+    ActiveSheet.ChartObjects("Chart 4").Activate
+    ActiveChart.FullSeriesCollection(1).Select
+    ActiveChart.FullSeriesCollection(1).ApplyDataLabels
+    ActiveChart.FullSeriesCollection(1).DataLabels.Select
+'    SELECTION.ShowValue = False
+    ActiveChart.SeriesCollection(1).DataLabels.Format.TextFrame2.TextRange. _
+        InsertChartField msoChartFieldRange, "=Interface!AV2:AV" & LAST_ROW1, 0
+    SELECTION.ShowRange = True
+    SELECTION.Position = xlLabelPositionRight
+   
+
+End Sub
+
+
+
+    With ActiveSheet.ChartObjects.Add(Left:=500, Width:=375, Top:=125, Height:=225)
+    With .Chart
+        .ChartType = xlColumnClustered
+        .SetSourceData Source:=SRCDATA2
+        .Parent.Name = "Chart 1"
+        .ChartTitle.Text = "No. of Entries Vs FS Line"
+        .ClearToMatchStyle
+        .ChartStyle = 209
+        .Legend.DELETE
+    End With
+    End With
