@@ -1,0 +1,24 @@
+sub check()
+
+checkpoint:
+If IsAppRunning(File_path) = True Then
+ Application.Wait (Now + TimeValue("0:00:5"))
+ GoTo checkpoint:
+Else
+End If
+
+'MsgBox "Execution Complete."
+
+End Sub
+
+
+
+Function IsAppRunning(ByVal sAppName) As Boolean
+Dim oApp As Object
+On Error Resume Next
+Set oApp = GetObject(, sAppName)
+If Not oApp Is Nothing Then
+Set oApp = Nothing
+IsAppRunning = True
+End If
+End Function
