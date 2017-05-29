@@ -1,0 +1,137 @@
+Sub process()
+
+Application.ScreenUpdating = False
+Application.DisplayAlerts = False
+Application.StatusBar = "Starting process.."
+
+Sheets("Dummy").Visible = True
+
+    Call populate
+    
+    Call template
+
+Sheets("Dummy").Visible = False
+
+MsgBox "Final template is saved in 'Final Reports' folder."
+
+Application.ScreenUpdating = True
+Application.DisplayAlerts = True
+Application.StatusBar = "Done!"
+
+End Sub
+
+
+Sub populate()
+
+Dim path As String
+Dim wk, wk1 As Workbook
+Application.StatusBar = "Picking the inputs from ACL module.."
+
+    Set wk = ActiveWorkbook
+    Sheets("Dummy").Range("B2:B13").Clear
+    path = ThisWorkbook.path
+    Set wk1 = Workbooks.Open(path & "\ACL Module\Output\Raw_Report.xlsx")
+    wk.Sheets("Dummy").Activate
+    Range("B2:B13").Value = wk1.Sheets("REPORT").Range("B2:B13").Value
+    
+    wk1.Close savechanges = False
+    
+End Sub
+
+Sub delete()
+
+Dim path As String
+path = Sheets("Dashboard").Cells(7, 4).Value
+
+Dim aFile As String
+aFile = path & "\Output\RAW_REPORT.xlsx"
+If Len(Dir$(aFile)) > 0 Then
+     Kill aFile
+End If
+
+End Sub
+
+
+Dim TEMPLATE_NAME As String
+
+'This Sub Function will trigger the application
+Public Sub Analysis()
+
+    
+    Dim SoftwarePath As String
+    Dim ProjectPath As String
+    Dim ProjectName As String
+
+    ' Capture Software & Project details
+    
+    SoftwarePath = Sheets("Dashboard").Cells(6, 4).Value
+    
+    ProjectPath = Sheets("Dashboard").Cells(7, 4).Value
+    
+    ProjectName = Sheets("Dashboard").Cells(8, 4).Value
+    
+        Call execute_ACL(SoftwarePath, ProjectPath, ProjectName)
+
+    Application.Wait (Now + TimeValue("0:00:1"))
+
+   
+'    MsgBox "Code complete."
+
+End Sub
+
+'actual sub function to trigger the ACL function
+Private Sub execute_ACL(Prog_path As String, Proj_path As String, File_path As String)
+On Error GoTo error1
+
+    Dim dbACLProcessID As Long
+    
+    cACLProgram = Prog_path & "\ACLWin.exe  "
+    strACLFile = Proj_path & "\" & File_path
+    MAINPATH = " /vMAINPATH=""" & Proj_path & """"
+    
+        Start = " /bC_Readin"
+    
+    ' Comment : invoking the executable; also passing appropriate parameters
+    dbACLProcessID = Shell(cACLProgram & strACLFile & MAINPATH & Start)
+        
+    GoTo normalend
+error1:
+            MsgBox "Another instance of ACL is open , please close the instance and try again"
+normalend:
+        Application.Wait (Now + TimeValue("0:00:1"))
+
+End Sub
+
+
+Sub template()
+
+Dim path, selection, val(100) As String
+Dim wk, wk1 As Workbook
+Dim a As Integer
+Application.StatusBar = "Populating values in template.."
+
+path = ThisWorkbook.path
+
+Set wk = ActiveWorkbook
+wk.Activate
+selection = Trim(wk.Sheets("Dashboard").Cells(7, 8).Value)
+Sheets("Dummy").Select
+
+For a = 1 To 12
+    val(a) = Cells(a + 1, 2)
+Next a
+
+Set wk1 = Workbooks.Open(path & "\Excel Templates\" & selection & "-Template.xlsx")
+
+Sheets("1. Input").Select
+
+For a = 1 To 12
+    Cells(a + 9, 4) = val(a)
+Next a
+
+wk1.SaveAs (path & "\Final Reports\5000 Prospectus_" & selection & "_Template_" & Format(Now, "MM-dd-yyyy hh-mm-ss") & ".xlsx")
+wk1.Close
+
+End Sub
+
+
