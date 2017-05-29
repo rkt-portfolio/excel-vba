@@ -1,0 +1,2 @@
+'include this code in the sub function
+ActiveSheet.Range("$A:$C").RemoveDuplicates Columns:=Array(1, 2, 3), header:=xlYes
