@@ -1,0 +1,4653 @@
+Option Explicit
+
+Sub Generate_final_report()
+
+IncrementalProgress.Show
+
+Application.DisplayAlerts = False
+Application.ScreenUpdating = False
+
+Dim PPD_file As String
+Dim deferrals As String
+Dim inbound_file As String
+Dim tracking_file As String
+Dim path As String
+Dim Rtrak_file As String
+Dim Finance_file As String
+Dim DAP_file As String
+Dim TRACKING_SHEET As String
+Dim USI_file As String
+Dim OTHER_REVIEWS As String
+Dim engagement_start_date As Date
+Dim engagement_end_date As Date
+Dim num_of_exeptions As Integer
+Dim Empid1 As String
+Dim i As Integer
+Workbooks("QRM automation tool.xlsm").Activate
+Sheets("Interface").Select
+
+'Assigning values to variables
+
+path = ActiveWorkbook.path
+DAP_file = Range("DAP_FILE").Value
+Rtrak_file = Range("RTRAK_FILE").Value
+Finance_file = Range("FINANCE_FILE").Value
+PPD_file = Range("PPD_LIST").Value
+tracking_file = Range("TRACKING_FILE").Value
+deferrals = Range("DEFERRALS").Value
+inbound_file = Range("inbound_file").Value
+engagement_start_date = Range("START_DATE").Value
+engagement_end_date = Range("END_DATE").Value
+USI_file = Range("USI_file").Value
+OTHER_REVIEWS = Range("OTHER_REVIEWS").Value
+'preliminary checks
+If Trim(path) = "" Then
+MsgBox "Please enter the path where the files are placed."
+GoTo ENDPROCESS:
+End If
+If Trim(DAP_file) = "" Then
+MsgBox "Please enter the name of the DAP file."
+GoTo ENDPROCESS:
+End If
+If Trim(Rtrak_file) = "" Then
+MsgBox "Please enter the name of the Rtrak file."
+GoTo ENDPROCESS:
+End If
+If Trim(Finance_file) = "" Then
+MsgBox "Please enter the name of the finance file."
+GoTo ENDPROCESS:
+End If
+If Trim(PPD_file) = "" Then
+MsgBox "Please enter the name of the PPD list file."
+GoTo ENDPROCESS:
+End If
+If Trim(tracking_file) = "" Then
+MsgBox "Please enter the name of the PPD master tracking file."
+GoTo ENDPROCESS:
+End If
+If Trim(deferrals) = "" Then
+MsgBox "Please enter the name of the deferrals file."
+GoTo ENDPROCESS:
+End If
+If Trim(USI_file) = "" Then
+MsgBox "Please enter the name of the USI integration file."
+GoTo ENDPROCESS:
+End If
+If Trim(OTHER_REVIEWS) = "" Then
+MsgBox "Please enter the name of the other inspections file."
+GoTo ENDPROCESS:
+End If
+If Trim(engagement_start_date) = "" Then
+MsgBox "Please enter the Expected engagement end date - start date."
+GoTo ENDPROCESS:
+End If
+If Trim(engagement_end_date) = "" Then
+MsgBox "Please enter the Expected engagement end date - end date."
+GoTo ENDPROCESS:
+End If
+If engagement_start_date >= engagement_end_date Then
+MsgBox "The start date should be before the end date"
+GoTo ENDPROCESS:
+End If
+
+Dim afile As String
+
+afile = path & "\" & DAP_file
+If Len(Dir$(afile)) < 0 Then
+MsgBox "DAP file not found. Please input the correct name of the DAP file"
+GoTo ENDPROCESS:
+End If
+
+afile = path & "\" & Rtrak_file
+If Len(Dir$(afile)) < 0 Then
+MsgBox "RTrak file not found. Please input the correct name of the RTrak file"
+GoTo ENDPROCESS:
+End If
+
+afile = path & "\" & Finance_file
+If Len(Dir$(afile)) < 0 Then
+MsgBox "Finance file not found. Please input the correct name of the Finance file"
+GoTo ENDPROCESS:
+End If
+
+afile = path & "\" & PPD_file
+If Len(Dir$(afile)) < 0 Then
+MsgBox "PPD list file not found. Please input the correct name of the PPD list file"
+GoTo ENDPROCESS:
+End If
+
+afile = path & "\" & tracking_file
+If Len(Dir$(afile)) < 0 Then
+MsgBox "Master practice review file not found. Please input the correct name of the Master practice review file"
+GoTo ENDPROCESS:
+End If
+
+afile = path & "\" & deferrals
+If Len(Dir$(afile)) < 0 Then
+MsgBox "Practice review deferrals file not found. Please input the correct name of the Practice review deferrals file"
+GoTo ENDPROCESS:
+End If
+
+afile = path & "\" & USI_file
+If Len(Dir$(afile)) < 0 Then
+MsgBox "USI integration file not found. Please input the correct name of the USI integration file"
+GoTo ENDPROCESS:
+End If
+
+afile = path & "\" & OTHER_REVIEWS
+If Len(Dir$(afile)) < 0 Then
+MsgBox "Other inspections file not found. Please input the correct name of the Other inspections file"
+GoTo ENDPROCESS:
+End If
+
+
+Dim check_sample As String
+Dim check_sample1 As Integer
+
+For i = 1 To 19
+check_sample = Cells(i + 8, 23).Value
+If check_sample = "All" Then
+GoTo DONTEND:
+End If
+If IsNumeric(Cells(i + 8, 23).Value) = True Then
+check_sample1 = Cells(i + 8, 23).Value
+End If
+If IsNumeric(check_sample) = False And check_sample <> "All" Then
+MsgBox "Please enter a valid number or 'All' as the input for Group " & i
+GoTo ENDPROCESS:
+ElseIf Cells(i + 8, 23).Value < 0 Then
+MsgBox "Please enter a valid positive number or 'All' as the input for Group " & i
+GoTo ENDPROCESS:
+ElseIf Cells(i + 8, 23).Value / 1 <> check_sample1 Then
+MsgBox "Please enter a valid positive integer or 'All' as the input for Group " & i
+GoTo ENDPROCESS:
+End If
+DONTEND:
+Next i
+
+IncrementalProgress.Increment 10, "Reading DAP file..."
+
+'creating short list master file
+
+Workbooks.Open (path & "\Data inputs\" & DAP_file)
+Application.ScreenUpdating = False
+ActiveWorkbook.Sheets("Sheet1").Select
+Range("A1").Select
+Selection.AutoFilter
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+Dim column_subtype As Integer
+Dim column_diff2 As Integer
+Dim column_ClientIndustry As Integer
+Dim column_enddate As Integer
+Dim column_Status As Integer
+Dim column_startdate As Integer
+Dim column_feedback As Integer
+Dim column_diff1 As Integer
+Dim column_msuboff As Integer
+Dim column_FeeType As Integer
+Dim row1 As Integer
+Dim row2 As Integer
+Dim row3 As Integer
+Dim column_rtrakopp As Integer
+Dim column_last As Integer
+Dim column_empid As Integer
+Dim column_revenue As Integer
+Dim column_enddate1 As Integer
+Dim column_client_name As Integer
+Dim column_engagement_risk As Integer
+Dim column_wbs_code As Integer
+Dim column_rtrak_estvalue As Integer
+Dim column_moff As Integer
+Dim column_shortname As Integer
+Dim column_indtype As Integer
+Dim column_leadername As Integer
+Dim column_qrmempname As Integer
+Dim column_dapid As Integer
+Dim column_D10_answer As Integer
+Dim column_D8_answer As Integer
+Dim column_D71_answer As Integer
+Dim column_A92_answer As Integer
+Dim column_A3_answer As Integer
+Dim column_A9_answer As Integer
+Dim column_A7_answer As Integer
+Dim column_A71_answer As Integer
+Dim column_A711_answer As Integer
+Dim column_A8_answer As Integer
+Dim column_E3_answer As Integer
+Dim base_pop_grp9 As Integer
+Dim base_pop_grp5 As Integer
+Dim base_pop_grp13 As Integer
+Dim base_pop_grp14  As Integer
+
+'Defining column numbers
+Rows("1:1").Select
+Selection.Find(What:="TypeOfSubmission", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_subtype = ActiveCell.Column
+Selection.Find(What:="D.10 Answer", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_D10_answer = ActiveCell.Column
+Selection.Find(What:="D.8 Answer", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_D8_answer = ActiveCell.Column
+Selection.Find(What:="A.9.2 Answer", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_A92_answer = ActiveCell.Column
+Selection.Find(What:="A.3 Answer", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_A3_answer = ActiveCell.Column
+Selection.Find(What:="A.9 Answer", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_A9_answer = ActiveCell.Column
+Selection.Find(What:="A.7 Answer", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_A7_answer = ActiveCell.Column
+Selection.Find(What:="A.7.1 Answer", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_A71_answer = ActiveCell.Column
+Selection.Find(What:="A.7.1.1 Answer", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_A711_answer = ActiveCell.Column
+Selection.Find(What:="A.8 Answer", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_A8_answer = ActiveCell.Column
+Selection.Find(What:="E.3 Answer", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_E3_answer = ActiveCell.Column
+
+Selection.Find(What:="D.7.1 Answer", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_D71_answer = ActiveCell.Column
+Selection.Find(What:="AcceptanceID", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_dapid = ActiveCell.Column
+Selection.Find(What:="ClientIndustry", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_ClientIndustry = ActiveCell.Column
+Selection.Find(What:="EngagementExpectedEndDate", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_enddate = ActiveCell.Column
+Selection.Find(What:="EngagementEndDate", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_enddate1 = ActiveCell.Column
+Selection.Find(What:="EngagementExpectedRevenue", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_revenue = ActiveCell.Column
+Selection.Find(What:="ClientName", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_client_name = ActiveCell.Column
+Selection.Find(What:="RiskRating", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_engagement_risk = ActiveCell.Column
+Selection.Find(What:="WbsCode", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_wbs_code = ActiveCell.Column
+Selection.Find(What:="RTrakOpportunityEstimatedValue", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_rtrak_estvalue = ActiveCell.Column
+Cells(1, column_rtrak_estvalue).EntireColumn.Select
+Selection.NumberFormat = "$#,##0.00_);[Red]($#,##0.00)"
+
+Rows("1:1").Select
+Selection.Find(What:="MarketOffering", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_moff = ActiveCell.Column
+Selection.Find(What:="EngagementShortName", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_shortname = ActiveCell.Column
+Selection.Find(What:="EngagementIndustryType", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_indtype = ActiveCell.Column
+Selection.Find(What:="EngagementLeaderName", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_leadername = ActiveCell.Column
+Selection.Find(What:="QRMName", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_qrmempname = ActiveCell.Column
+Range("A1").Select
+Rows("1:1").Select
+Selection.Find(What:="Status", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_Status = ActiveCell.Column
+Selection.Find(What:="EngagementExpectedStartDate", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_startdate = ActiveCell.Column
+Selection.Find(What:="RTrakOpportunityNumber", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_rtrakopp = ActiveCell.Column
+Selection.Find(What:="EngagementLeaderEmployeeID", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_empid = ActiveCell.Column
+Selection.Find(What:="FeedbackIndicator", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_feedback = ActiveCell.Column
+Selection.Find(What:="FeeType", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_FeeType = ActiveCell.Column
+Range("A1").End(xlToRight).Offset(0, 1).Select
+column_last = ActiveCell.Column
+column_diff1 = column_last - column_empid
+Range("A1").Select
+Rows("1:1").Select
+Selection.Find(What:="MarketSubOffering", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_msuboff = ActiveCell.Column
+Cells(1, column_enddate).EntireColumn.Select
+Selection.NumberFormat = "m/d/yyyy"
+Cells(1, column_enddate1).EntireColumn.Select
+Selection.NumberFormat = "m/d/yyyy"
+Cells(1, column_startdate).EntireColumn.Select
+Selection.NumberFormat = "m/d/yyyy"
+Range("A1").Select
+ActiveSheet.Range("D1").AutoFilter Field:=column_subtype, _
+    Criteria1:=("DEL"), Operator:=xlFilterValues
+ActiveSheet.Range("D1").AutoFilter Field:=column_indtype, _
+    Criteria1:="<>*FED*", Operator:=xlFilterValues
+ActiveSheet.Range("D1").AutoFilter Field:=column_enddate, _
+    Criteria1:="<=" & engagement_end_date, Operator:=xlAnd, Criteria2:= _
+        ">=" & engagement_start_date, Operator:=xlFilterValues
+ActiveSheet.Range("C1").AutoFilter Field:=column_Status, _
+    Criteria1:="<>*Discontinued*", Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks.Add
+ActiveSheet.Paste
+Application.CutCopyMode = False
+Selection.Columns.AutoFit
+
+Application.DisplayAlerts = False
+ActiveWorkbook.SaveAs path & "\Intermediate files\DAP shortlist.xls"
+Application.DisplayAlerts = True
+Workbooks.Open (path & "\Data inputs\" & tracking_file), UpdateLinks:=False
+
+ActiveWorkbook.Sheets("Master").Activate
+Range("B3:N3").Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("DAP shortlist.xls").Activate
+Sheets("sheet2").Select
+ActiveSheet.Paste
+Application.CutCopyMode = False
+Sheets("sheet1").Select
+Cells(2, column_last).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_diff1 & "],Sheet2!R1C1:R650C13,13,0)"
+Selection.Copy
+row1 = Cells(2, column_empid).End(xlDown).Row
+Cells(row1, column_last).Select
+Range(Selection, Selection.End(xlUp)).Select
+ActiveSheet.Paste
+Cells(1, column_last).EntireColumn.Select
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+Cells(1, column_last).Value = "check"
+
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("A1").AutoFilter Field:=column_last, _
+    Criteria1:=("<>yes"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(row1, column_last)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+Range("A1").Select
+Selection.AutoFilter
+Dim base_pop1 As Integer
+base_pop1 = Range("A100000").End(xlUp).Row - 1
+
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Range("A1").RemoveDuplicates Columns:=column_rtrakopp, Header:= _
+        xlYes
+Range("A1").Select
+
+IncrementalProgress.Increment 20, "Group computation commenced..."
+
+
+'''''''''''''''''''''''Group 1
+
+'Workbooks.Open (path & "\Data inputs\" & deferrals), UpdateLinks:=False
+'ActiveWorkbook.Sheets("List of Deferrals").Activate
+'If ActiveSheet.AutoFilterMode = True Then ActiveSheet.AutoFilterMode = False
+Dim base_pop_grp1 As Integer
+'base_pop_grp1 = Range("C50000").End(xlUp).Row - 1
+'Range("A1").Select
+'Range(Selection, Selection.End(xlToRight)).Select
+'Range(Selection, Selection.End(xlDown)).Select
+'Selection.AutoFilter
+'
+'ActiveSheet.Range("B1").AutoFilter Field:=2, _
+'    Criteria1:=("PPD"), Operator:=xlFilterValues
+'Range("A1").Select
+'Range(Selection, Selection.End(xlToRight)).Select
+'Range(Selection, Selection.End(xlDown)).Select
+'Workbooks(DAP_file).Activate
+'Sheets("sheet2").Select
+'Workbooks(deferrals).Activate
+'Selection.Copy
+'Workbooks(DAP_file).Activate
+'ActiveSheet.Paste
+'Sheets("Sheet1").Select
+'Selection.AutoFilter
+'Range("A1").Select
+'Range(Selection, Selection.End(xlToRight)).Select
+'Range(Selection, Selection.End(xlDown)).Select
+'Selection.AutoFilter
+'Cells(2, column_last).Select
+'ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_diff1 & "],Sheet2!R1C7:R1000C7,1,0)"
+'Selection.Copy
+Dim row5 As Integer
+'row5 = Cells(2, column_rtrakopp).End(xlDown).Row
+'Range(Cells(2, column_last), Cells(row5, column_last)).Select
+'ActiveSheet.Paste
+'ActiveSheet.Range("A1").AutoFilter Field:=column_last, _
+'    Criteria1:=("<>#N/A"), Operator:=xlFilterValues
+'Range("A1").Select
+'Range(Selection, Selection.End(xlToRight)).Select
+'Range(Selection, Selection.End(xlDown)).Select
+'Selection.Copy
+'Workbooks.Add
+'ActiveSheet.Paste
+'Application.DisplayAlerts = False
+'ActiveWorkbook.SaveAs path & "\Intermediate files\Group1 results.xls"
+'Application.DisplayAlerts = True
+'
+'
+'Workbooks(DAP_file).Activate
+'Sheets("Sheet2").Select
+'Cells.Select
+'Selection.Delete
+'Range("A1").Select
+'Workbooks(deferrals).Activate
+'ActiveSheet.Range("B1").AutoFilter Field:=2, _
+'    Criteria1:=("project"), Operator:=xlFilterValues
+'Range("A1").Select
+'Range(Selection, Selection.End(xlToRight)).Select
+'Range(Selection, Selection.End(xlDown)).Select
+'Selection.Copy
+'Workbooks(DAP_file).Activate
+'Sheets("Sheet2").Select
+'ActiveSheet.Paste
+'Sheets("sheet1").Select
+'ActiveSheet.Range("A1").AutoFilter Field:=column_last
+'Cells(2, column_last).Select
+'ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_last - column_dapid & "],Sheet2!R1C3:R1000C3,1,0)"
+'Selection.Copy
+'row5 = Cells(2, column_rtrakopp).End(xlDown).Row
+'Range(Cells(2, column_last), Cells(row5, column_last)).Select
+'ActiveSheet.Paste
+'ActiveSheet.Range("A1").AutoFilter Field:=column_last, _
+'    Criteria1:=("<>#N/A"), Operator:=xlFilterValues
+'Range("A1").Select
+'Range(Selection, Selection.End(xlToRight)).Select
+'Range(Selection, Selection.End(xlDown)).Select
+'Selection.Copy
+'Workbooks("Group1 results.xls").Activate
+'Sheets("Sheet2").Select
+'ActiveSheet.Paste
+'
+'Workbooks(deferrals).Close savechanges:=False
+
+''''''''''''''''''''''''''''Group 2
+
+Workbooks(DAP_file).Activate
+Sheets("sheet2").Select
+Cells.Select
+Selection.Delete
+Workbooks(tracking_file).Activate
+Range("B3:P3").Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks(DAP_file).Activate
+Range("A1").Select
+ActiveSheet.Paste
+Sheets("sheet1").Select
+ActiveSheet.Range("A1").AutoFilter Field:=column_last
+Cells(2, column_last).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_diff1 & "],Sheet2!R1C1:R1000C14,14,0)"
+Cells(2, column_last).Select
+Selection.Copy
+Range(Cells(2, column_last), Cells(row5, column_last)).Select
+ActiveSheet.Paste
+ActiveSheet.Range("A1").AutoFilter Field:=column_last, _
+    Criteria1:=("yes"), Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks.Add
+ActiveSheet.Paste
+Application.DisplayAlerts = False
+ActiveWorkbook.SaveAs path & "\Intermediate files\Group2 results.xls"
+Application.DisplayAlerts = True
+
+Dim base_pop_grp2 As Integer
+base_pop_grp2 = Range("A50000").End(xlUp).Row - 1
+
+Workbooks(DAP_file).Activate
+ActiveSheet.Range("A1").AutoFilter Field:=column_last
+
+'''''''''''''''''''''''''Group 3
+
+Workbooks("DAP shortlist.xls").Activate
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks.Add
+ActiveSheet.Paste
+Application.CutCopyMode = False
+Sheets("Sheet1").Name = "Group 3"
+Cells(2, column_last).Select
+Range(Selection, Selection.End(xlDown)).Select
+row2 = Selection.Rows.Count + 1
+For i = 2 To row2
+Cells(i, column_last).Value = "Group 3"
+Next i
+Application.DisplayAlerts = False
+ActiveWorkbook.SaveAs path & "\Intermediate files\individual Group results.xls"
+Application.DisplayAlerts = True
+
+
+'''''''''''''''''''''''''''Group 4
+
+Workbooks.Open (path & "\Data inputs\" & PPD_file), UpdateLinks:=False
+    Columns("Q:Q").Select
+    Selection.TextToColumns Destination:=Range("Q1"), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 3), TrailingMinusNumbers:=True
+    Range("A1").Select
+If ActiveSheet.AutoFilterMode = True Then ActiveSheet.AutoFilterMode = False
+
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("R1").AutoFilter Field:=18, _
+    Criteria1:=Array("X"), Operator:=xlFilterValues
+ActiveSheet.Range("Q1").AutoFilter Field:=17, _
+     Criteria1:=">=1/1/2013", Operator:=xlFilterValues
+Range("A10000").End(xlUp).Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlUp)).Select
+Workbooks("DAP shortlist.xls").Activate
+Sheets("sheet2").Select
+Cells.Select
+Selection.Delete
+Workbooks("individual Group results.xls").Activate
+Sheets.Add
+ActiveSheet.Name = "Group 4"
+Workbooks(PPD_file).Activate
+Selection.Copy
+Workbooks("DAP shortlist.xls").Activate
+ActiveSheet.Paste
+Workbooks(PPD_file).Activate
+ActiveSheet.Range("R1").AutoFilter Field:=18, _
+    Criteria1:="<>X", Operator:=xlFilterValues
+ActiveSheet.Range("Q1").AutoFilter Field:=17, _
+     Criteria1:=">=7/1/2013", Operator:=xlFilterValues
+Range("A10000").End(xlUp).Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlUp)).Select
+Selection.Copy
+Workbooks("DAP shortlist.xls").Activate
+ActiveSheet.Range("A1").End(xlDown).Select
+ActiveCell.Offset(1, 0).Select
+ActiveSheet.Paste
+ActiveSheet.Previous.Select
+Selection.AutoFilter
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+Cells(2, column_last).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_diff1 & "],Sheet2!R2C1:R1000C1,1,0)"
+Cells(2, column_rtrakopp).Select
+Selection.End(xlDown).Select
+row1 = ActiveCell.Row
+Cells(2, column_last).Select
+Selection.Copy
+Cells(3, column_last).Select
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Paste
+Cells(1, column_last).EntireColumn.Select
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+Cells(1, column_last).Select
+ActiveSheet.Range("A1").AutoFilter Field:=column_last, _
+    Criteria1:=("<>#N/A"), Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+ActiveSheet.Paste
+Application.CutCopyMode = False
+Cells(2, column_last).Select
+Range(Selection, Selection.End(xlDown)).Select
+row2 = Selection.Rows.Count + 1
+For i = 2 To row2
+Cells(i, column_last).Value = "Group 4"
+Next i
+
+Workbooks(PPD_file).Close savechanges:=False
+
+'''''''''''''''''''''''''''''''Group 5
+
+Workbooks(DAP_file).Activate
+ActiveSheet.Range("D1").AutoFilter Field:=column_indtype, _
+    Criteria1:=("<>*FED*"), Operator:=xlFilterValues
+Workbooks.Open (path & "\Data inputs\" & Rtrak_file), UpdateLinks:=False
+Call Group5_rearrage(Rtrak_file, path, Finance_file, DAP_file, column_rtrakopp, base_pop_grp5, tracking_file)
+
+''''''''''''''''''''''''''''''Group 6 and 7
+
+Call Group6_7(DAP_file, column_A7_answer, column_A71_answer, column_A711_answer, column_A8_answer, column_E3_answer, column_rtrakopp, column_last)
+
+''''''''''''''''''''''''''''''Group 8
+
+Workbooks.Open (path & "\Data inputs\" & Finance_file), UpdateLinks:=False
+
+Call Group8(Finance_file, column_last, column_wbs_code, column_rtrakopp)
+
+Workbooks(Finance_file).Close savechanges:=False
+
+''''''''''''''''''''''''''''''''Group 9 and 10
+
+Call Group9_10(DAP_file, column_subtype, column_ClientIndustry, column_enddate, column_Status, column_rtrakopp, path, tracking_file, column_last, column_empid, column_D10_answer, column_D8_answer, column_A92_answer, base_pop_grp9, engagement_end_date, engagement_start_date, column_indtype)
+
+IncrementalProgress.Increment 30, "10 Groups processed..."
+
+
+'''''''''''''''''''''''''''''Group 11
+
+Workbooks(DAP_file).Activate
+Sheets("Sheet2").Select
+Cells.Select
+Selection.Delete
+Sheets("Sheet1").Select
+Selection.AutoFilter
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("C1").AutoFilter Field:=column_A3_answer, _
+    Criteria1:="*A.3.2*", Operator:=xlFilterValues
+ActiveSheet.Range("C1").AutoFilter Field:=column_A9_answer, _
+    Criteria1:="yes", Operator:=xlFilterValues
+ActiveSheet.Range("C1").AutoFilter Field:=column_moff, _
+    Criteria1:="<>*cyber*", Operator:=xlFilterValues
+Cells(1, column_rtrakopp).EntireColumn.Select
+
+Workbooks("DAP shortlist.xls").Activate
+Sheets("sheet1").Select
+Selection.AutoFilter
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+Sheets("Sheet2").Select
+Cells.Select
+Selection.Delete
+Workbooks(DAP_file).Activate
+Selection.Copy
+Workbooks("DAP shortlist.xls").Activate
+ActiveSheet.Paste
+    Range("A:A").Select
+    Selection.TextToColumns Destination:=Range("A1"), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 2), TrailingMinusNumbers:=True
+
+Sheets("sheet1").Select
+Cells(2, column_last).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_last - column_rtrakopp & "],Sheet2!R1C1:R10000C1,1,0)"
+Selection.Copy
+Range(Cells(2, column_last), Cells(2, column_last).End(xlDown)).Select
+ActiveSheet.Paste
+ActiveSheet.Range("C1").AutoFilter Field:=column_last, _
+    Criteria1:="<>#N/A", Operator:=xlFilterValues
+Workbooks("individual Group results.xls").Activate
+Sheets.Add
+ActiveSheet.Name = "Group 11"
+Workbooks("DAP shortlist.xls").Activate
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+
+Workbooks("individual Group results.xls").Activate
+ActiveSheet.Paste
+Selection.Columns.AutoFit
+Cells(2, column_last).Select
+Range(Selection, Selection.End(xlDown)).Select
+row2 = Selection.Rows.Count + 1
+For i = 2 To row2
+Cells(i, column_last).Value = "Group 11"
+Next i
+
+
+'''''''''''''''''''''''Group 12
+
+Workbooks("DAP Shortlist.xls").Activate
+Selection.AutoFilter
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("D1").AutoFilter Field:=column_msuboff, _
+    Criteria1:=("VIGILANT"), Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+Sheets.Add
+ActiveSheet.Name = "Group 12"
+Workbooks("DAP Shortlist.xls").Activate
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+ActiveSheet.Paste
+Cells(2, column_last).Select
+Range(Selection, Selection.End(xlDown)).Select
+row2 = Selection.Rows.Count + 1
+For i = 2 To row2
+Cells(i, column_last).Value = "Group 12"
+Next i
+
+Call Group13_14(DAP_file, column_indtype, column_feedback, column_startdate, column_Status, path, tracking_file, column_last, column_empid, column_rtrakopp, column_subtype, column_enddate, engagement_end_date, engagement_start_date, base_pop_grp13, base_pop_grp14)
+
+'''''''''''''''''''''''''''''''''Group 15
+
+Workbooks("individual Group results.xls").Activate
+Sheets.Add
+ActiveSheet.Name = "Group 15"
+Workbooks(DAP_file).Activate
+Selection.AutoFilter
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("D1").AutoFilter Field:=column_D71_answer, _
+    Criteria1:="*D.7.1.2*", Operator:=xlOr, Criteria2:= _
+        "*D.7.1.3*", Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks.Add
+ActiveSheet.Paste
+ActiveWorkbook.SaveAs path & "\Intermediate files\Group 15 results.xls"
+
+Workbooks.Open (path & "\Data inputs\" & inbound_file), UpdateLinks:=False
+row1 = Range("D5").End(xlDown).Row
+Range(Cells(5, 4), Cells(row1, 4)).Select
+Selection.Copy
+Workbooks("Group 15 results.xls").Activate
+Sheets("Sheet2").Select
+ActiveSheet.Paste
+Workbooks(inbound_file).Activate
+Range(Cells(5, 6), Cells(row1, 6)).Select
+Selection.Copy
+Workbooks("Group 15 results.xls").Activate
+Range("B1").Select
+ActiveSheet.Paste
+Workbooks(inbound_file).Activate
+Range(Cells(5, 17), Cells(row1, 18)).Select
+Selection.Copy
+Workbooks("Group 15 results.xls").Activate
+Range("C1").Select
+ActiveSheet.Paste
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+
+ActiveSheet.Range("C1").AutoFilter Field:=3, _
+    Criteria1:="", Operator:=xlFilterValues
+ActiveSheet.Range("C1").AutoFilter Field:=4, _
+    Criteria1:="", Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(row1, 4)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("D1").AutoFilter Field:=3
+ActiveSheet.Range("D1").AutoFilter Field:=4
+Range("E2").Select
+ActiveCell.FormulaR1C1 = "=LEFT(RC[-4],8)"
+Selection.Copy
+Range("A1").End(xlDown).Offset(0, 4).Select
+Range(Selection, Selection.End(xlUp)).Select
+ActiveSheet.Paste
+Selection.Copy
+Range("A2").Select
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+
+Range("E2").Select
+ActiveCell.FormulaR1C1 = "=trim(Right(RC[-3],8))"
+Selection.Copy
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Paste
+Selection.Copy
+Range("B2").Select
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+
+Sheets("Sheet1").Select
+Cells(1, column_last).Value = "check"
+Cells(2, column_last).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(LEFT(RC[-" & column_last - column_wbs_code & "],8),Sheet2!R1C1:R60000C1,1,0)"
+Selection.Copy
+row1 = Cells(2, column_empid).End(xlDown).Row
+Range(Cells(2, column_last), Cells(row1, column_last)).Select
+ActiveSheet.Paste
+ActiveSheet.Range("C1").AutoFilter Field:=column_last, _
+    Criteria1:="<>#N/A", Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Sheets("sheet3").Select
+ActiveSheet.Paste
+
+Sheets("Sheet1").Select
+ActiveSheet.Range("C1").AutoFilter Field:=column_last
+Cells(2, column_rtrakopp).EntireColumn.Select
+Selection.TextToColumns Destination:=Cells(1, column_rtrakopp), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 2), TrailingMinusNumbers:=True
+Cells(2, column_last).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RIGHT(RC[-" & column_last - column_rtrakopp & "],8),Sheet2!R1C2:R60000C2,1,0)"
+Selection.Copy
+Range(Cells(2, column_last), Cells(row1, column_last)).Select
+ActiveSheet.Paste
+ActiveSheet.Range("C1").AutoFilter Field:=column_last, Criteria1:="<>#N/A", Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Sheets("sheet3").Select
+Range("A60000").End(xlUp).Offset(1, 0).Select
+ActiveSheet.Paste
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+
+
+Workbooks(tracking_file).Activate
+Range("B3:N3").Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("Group 15 results.xls").Activate
+Cells(1, column_last + 6).Select
+ActiveSheet.Paste
+Cells(2, column_last).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_last - column_empid & "],R1C" & column_last + 6 & ":R10000C" & column_last + 18 & ",13,0)"
+Selection.Copy
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Paste
+ActiveSheet.Range("C1").AutoFilter Field:=column_last, Criteria1:="yes", Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+ActiveSheet.Paste
+Dim base_pop_grp15 As Integer
+base_pop_grp15 = Range("A60000").End(xlUp).Row - 2
+ActiveSheet.Range("A1").RemoveDuplicates Columns:=column_rtrakopp, Header:=xlNo
+
+Cells(2, column_last).End(xlDown).Select
+row2 = Selection.Row
+For i = 2 To row2
+Cells(i, column_last).Value = "Group 15"
+Next i
+
+Workbooks(inbound_file).Close savechanges:=False
+
+'''''''''''''''''''''''''''''''''Group 16
+
+Workbooks("DAP shortlist.xls").Activate
+Sheets("Sheet1").Select
+Selection.AutoFilter
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("D1").AutoFilter Field:=column_FeeType, _
+    Criteria1:=Array("FIXED", "FIXED - TRADITIONAL", "FIXED - VALUE (CTS ONLY)"), Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+Sheets("Sheet2").Select
+ActiveSheet.Paste
+Application.CutCopyMode = False
+ActiveSheet.Name = "Group 16"
+Cells(2, column_last).Select
+Range(Selection, Selection.End(xlDown)).Select
+row2 = Selection.Rows.Count + 1
+For i = 2 To row2
+Cells(i, column_last).Value = "Group 16"
+Next i
+
+'''''''''''''''''''''''''''''''''''''Group 17
+
+Workbooks("DAP shortlist.xls").Activate
+Sheets("Sheet1").Select
+Selection.AutoFilter
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("D1").AutoFilter Field:=column_FeeType, _
+    Criteria1:=Array("CONTINGENCY OTHER", "CONTINGENCY VBB", "CONTINGENCY CTS"), Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+Sheets("Sheet3").Select
+ActiveSheet.Paste
+Application.CutCopyMode = False
+ActiveSheet.Name = "Group 17"
+Cells(2, column_last).Select
+Range(Selection, Selection.End(xlDown)).Select
+row2 = Range("A1000000").End(xlUp).Row
+For i = 2 To row2
+Cells(i, column_last).Value = "Group 17"
+Next i
+
+''''''''''''''''''''''''''Group 18
+
+Workbooks(DAP_file).Activate
+Selection.AutoFilter
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("D1").AutoFilter Field:=column_subtype, _
+    Criteria1:=("DEL"), Operator:=xlFilterValues
+ActiveSheet.Range("D1").AutoFilter Field:=column_indtype, _
+    Criteria1:="*FED*", Operator:=xlFilterValues
+ActiveSheet.Range("D1").AutoFilter Field:=column_enddate, _
+    Criteria1:="<=" & engagement_end_date, Operator:=xlAnd, Criteria2:= _
+        ">" & engagement_start_date, Operator:=xlFilterValues
+ActiveSheet.Range("C1").AutoFilter Field:=column_Status, _
+    Criteria1:="<>*Discontinued*", Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks.Add
+ActiveSheet.Paste
+Application.CutCopyMode = False
+Selection.Columns.AutoFit
+Range("A1").Select
+Application.DisplayAlerts = False
+ActiveWorkbook.SaveAs path & "\Intermediate files\Group 18 results.xls"
+Application.DisplayAlerts = True
+Workbooks(tracking_file).Activate
+Range("B3:P3").Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("Group 18 results.xls").Activate
+Sheets("sheet2").Select
+ActiveSheet.Paste
+Sheets("sheet1").Select
+Cells(2, column_last).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_diff1 & "],Sheet2!R1C1:R10000C15,15,0)"
+Selection.Copy
+Cells(2, column_empid).Select
+Selection.End(xlDown).Select
+row1 = ActiveCell.Row
+Cells(row1, column_last).Select
+Range(Selection, Selection.End(xlUp)).Select
+ActiveSheet.Paste
+Cells(1, column_last).EntireColumn.Select
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+Cells(1, column_last).Value = "check"
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("A1").AutoFilter Field:=column_last, _
+    Criteria1:=("<>yes"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(row1, column_last)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("A1").AutoFilter Field:=column_last
+Workbooks("individual Group results.xls").Activate
+Sheets.Add
+ActiveSheet.Name = "Group 18"
+Workbooks("Group 18 results.xls").Activate
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+ActiveSheet.Paste
+ActiveWorkbook.Save
+Dim base_pop_grp18 As Integer
+base_pop_grp18 = Range("A60000").End(xlUp).Row - 1
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Range("A1").RemoveDuplicates Columns:=column_rtrakopp, Header:=xlYes
+Cells(2, column_last).Select
+Range(Selection, Selection.End(xlDown)).Select
+row2 = Selection.Rows.Count + 1
+For i = 2 To row2
+Cells(i, column_last).Value = "Group 18"
+Next i
+
+
+''''''''''''''''''''''''''''''''Group 19
+Workbooks.Open path & "\data inputs\" & USI_file
+Sheets("QRM Detail").Select
+Range("A8:J8").Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks.Add
+ActiveSheet.Paste
+Application.DisplayAlerts = False
+ActiveWorkbook.SaveAs path & "\Intermediate files\Group 19 results.xls"
+Application.DisplayAlerts = True
+Workbooks(USI_file).Close savechanges:=False
+Range("J1").Value = "total"
+Range("k1").Value = "Percentage"
+Range("K2").Select
+ActiveCell.FormulaR1C1 = "=RC[-4]/RC[-1]"
+Selection.Copy
+row1 = Range("A60000").End(xlUp).Row
+Range("K2:K" & row1).Select
+ActiveSheet.Paste
+Range("A1:K" & row1).Select
+Selection.AutoFilter
+
+
+ActiveSheet.Range("A1").AutoFilter Field:=7, Criteria1:=("<500"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(row1, 11)).Offset(1, 0).SpecialCells(xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("A1").AutoFilter Field:=7
+
+ActiveSheet.Range("A1").AutoFilter Field:=7, Criteria1:=(""), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(row1, 11)).Offset(1, 0).SpecialCells(xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("A1").AutoFilter Field:=7
+
+ActiveSheet.Range("A1").AutoFilter Field:=11, Criteria1:=("<0.5"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(row1, 11)).Offset(1, 0).SpecialCells(xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("A1").AutoFilter Field:=11
+
+
+Workbooks("DAP Shortlist.xls").Activate
+If ActiveSheet.AutoFilterMode = True Then ActiveSheet.AutoFilterMode = False
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("Group 19 results.xls").Activate
+Sheets("Sheet2").Select
+Range("A1").Select
+ActiveSheet.Paste
+Cells(2, column_last).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(LEFT(RC[-" & column_last - column_wbs_code & "],11),Sheet1!R1C1:R60000C11,7,0)"
+Selection.Copy
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Paste
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks:=False, Transpose:=False
+
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("A1").AutoFilter Field:=column_last, Criteria1:=("#N/A"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(60000, column_last)).Offset(1, 0).SpecialCells(xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("A1").AutoFilter Field:=column_last
+
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+
+Workbooks("individual group results.xls").Activate
+Sheets.Add
+ActiveSheet.Name = "Group 19"
+
+Workbooks("Group 19 results.xls").Activate
+Selection.Copy
+Workbooks("individual group results.xls").Activate
+ActiveSheet.Paste
+Range("A1").Select
+
+
+
+''''''''''''''''''''''''''Group 1 to individual results file
+
+'Workbooks("individual Group results.xls").Activate
+'Sheets.Add
+'ActiveSheet.Name = "Group 1"
+'
+'Workbooks("Group1 results.xls").Activate
+'Sheets("sheet1").Select
+'Range("A1").Select
+'Range(Selection, Selection.End(xlToRight)).Select
+'Range(Selection, Selection.End(xlDown)).Select
+'ActiveSheet.Range("A1").RemoveDuplicates Columns:=column_rtrakopp, Header:= _
+'        xlYes
+'Range("A1").Select
+'Range(Selection, Selection.End(xlToRight)).Select
+'Range(Selection, Selection.End(xlDown)).Select
+'Selection.Copy
+'Workbooks("individual Group results.xls").Activate
+'ActiveSheet.Paste
+'
+'Workbooks("Group1 results.xls").Activate
+'Sheets("sheet2").Select
+'Range("A1").Select
+'Range(Selection, Selection.End(xlToRight)).Select
+'Range(Selection, Selection.End(xlDown)).Select
+'Selection.Copy
+'Workbooks("individual Group results.xls").Activate
+'Range("A60000").End(xlUp).Offset(1, 0).Select
+'ActiveSheet.Paste
+'
+'Range("A1").Select
+'Range(Selection, Selection.End(xlToRight)).Select
+'Range(Selection, Selection.End(xlDown)).Select
+'Selection.AutoFilter
+'ActiveSheet.Range("A1").AutoFilter Field:=column_rtrakopp, _
+'    Criteria1:=("RTrakOpportunityNumber"), Operator:=xlFilterValues
+'ActiveSheet.Range(Cells(1, 1), Cells(100000, column_last)).Offset(1, 0).SpecialCells _
+'    (xlCellTypeVisible).EntireRow.Delete
+'Selection.AutoFilter
+'Cells(2, column_last).Select
+'ActiveCell.Value = "Group 1"
+'Selection.Copy
+'Range(Selection, Selection.End(xlDown)).Select
+'ActiveSheet.Paste
+
+'''''''''''''''''''''Group 2 to individual results file
+
+Workbooks("individual Group results.xls").Activate
+Sheets.Add
+ActiveSheet.Name = "Group 2"
+Workbooks("Group2 results.xls").Activate
+Sheets("sheet1").Select
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Range("A1").RemoveDuplicates Columns:=column_rtrakopp, Header:= _
+        xlYes
+    Range("A1").Select
+    Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+ActiveSheet.Paste
+Application.CutCopyMode = False
+Cells(2, column_last).Select
+ActiveCell.Value = "Group 2"
+Selection.Copy
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Paste
+ActiveWorkbook.Save
+
+For i = 2 To 4
+Sheets("Group " & i).Select
+Cells(1, column_last).Value = "check"
+Next i
+
+For i = 6 To 19
+Sheets("Group " & i).Select
+Cells(1, column_last).Value = "check"
+Next i
+
+ActiveWorkbook.Save
+
+Workbooks(DAP_file).Close savechanges:=False
+Workbooks(tracking_file).Close savechanges:=False
+Workbooks("Group2 results.xls").Close savechanges:=True
+Workbooks("Group1 results.xls").Close savechanges:=True
+Workbooks("Group 13 results.xls").Close savechanges:=True
+Workbooks("Group 15 results.xls").Close savechanges:=True
+Workbooks("Group 18 results.xls").Close savechanges:=True
+Workbooks("Group 19 results.xls").Close savechanges:=True
+Workbooks("DAP shortlist.xls").Close savechanges:=True
+Workbooks("DAP shortlist2.xls").Close savechanges:=True
+
+
+IncrementalProgress.Increment 40, "Consolidating of group results..."
+
+Call get_freq(column_rtrakopp, column_last, column_empid)
+
+IncrementalProgress.Increment 50, "Creating consolidated tab for all exceptions noted..."
+
+'''''''''''calling consolidation macro
+Call consolidation_part1(column_last, column_rtrakopp, column_wbs_code)
+
+IncrementalProgress.Increment 60, "Internal group wise sorting..."
+
+Call individual_grouping(column_empid, column_last, column_revenue)
+
+IncrementalProgress.Increment 70, "Comparing with other group results..."
+
+Call individual_grouping_part2(column_last, column_rtrakopp, column_empid, column_wbs_code)
+IncrementalProgress.Increment 80, "Adding additional criteria..."
+
+Call populating_deliverable(path, column_last, column_empid, column_rtrakopp, base_pop1, column_client_name, column_engagement_risk, column_wbs_code, column_rtrak_estvalue, column_moff, column_shortname, column_indtype, column_leadername, column_qrmempname, column_dapid, column_msuboff, column_revenue, base_pop_grp1, base_pop_grp2, base_pop_grp9, base_pop_grp5, base_pop_grp13, base_pop_grp14, base_pop_grp15, base_pop_grp18, OTHER_REVIEWS)
+ActiveWorkbook.Save
+IncrementalProgress.Increment 100, "Execution complete..."
+Unload IncrementalProgress
+Application.DisplayAlerts = True
+Application.ScreenUpdating = True
+MsgBox "The execution is complete. Please check the output folder for results."
+ENDPROCESS:
+
+End Sub
+
+
+
+Sub Group5_rearrage(Rtrak_file As String, path As String, Finance_file As String, DAP_file As String, column_rtrakopp As Integer, base_pop_grp5 As Integer, tracking_file As String)
+
+Workbooks.Add
+
+Dim row1 As Integer
+
+Application.DisplayAlerts = False
+ActiveWorkbook.SaveAs path & "\Intermediate files\Rtrak_rearranged.xls"
+Application.DisplayAlerts = True
+
+''''copying from open opps
+
+Dim lastrow_rtrak_open, rows_rtrak_open As Integer
+Workbooks(Rtrak_file).Activate
+Sheets("Open Opps").Select
+lastrow_rtrak_open = Range("N124").End(xlDown).Row
+
+Range("N124:N" & lastrow_rtrak_open).Select
+rows_rtrak_open = Selection.Rows.Count
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("A1").Select
+ActiveSheet.Paste
+
+Workbooks(Rtrak_file).Activate
+Range("B124:B" & lastrow_rtrak_open).Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("B1").Select
+ActiveSheet.Paste
+
+Workbooks(Rtrak_file).Activate
+Range("AD124:AD" & lastrow_rtrak_open).Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("C1").Select
+ActiveSheet.Paste
+
+Workbooks(Rtrak_file).Activate
+Range("AE124:AE" & lastrow_rtrak_open).Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("D1").Select
+ActiveSheet.Paste
+
+Workbooks(Rtrak_file).Activate
+Range("AH124:AH" & lastrow_rtrak_open).Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("E1").Select
+ActiveSheet.Paste
+
+Workbooks(Rtrak_file).Activate
+Range("O124:O" & lastrow_rtrak_open).Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("F1").Select
+ActiveSheet.Paste
+
+
+Workbooks(Rtrak_file).Activate
+Range("AG124:AG" & lastrow_rtrak_open).Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("G1").Select
+ActiveSheet.Paste
+
+Workbooks(Rtrak_file).Activate
+Range("AW124:AW" & lastrow_rtrak_open).Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("H1").Select
+ActiveSheet.Paste
+
+ActiveWorkbook.Save
+
+
+'''''''''''''''copying closed opps
+
+Dim lastrow_rtrak_closed, rows_rtrak_closed As Integer
+Workbooks(Rtrak_file).Activate
+Sheets("Closed Opps").Select
+lastrow_rtrak_closed = Range("O115").End(xlDown).Row
+
+Range("O115:O" & lastrow_rtrak_closed).Select
+rows_rtrak_closed = Selection.Rows.Count
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("A" & rows_rtrak_open + 1).Select
+ActiveSheet.Paste
+
+Workbooks(Rtrak_file).Activate
+Range("B115:B" & lastrow_rtrak_closed).Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("B" & rows_rtrak_open + 1).Select
+ActiveSheet.Paste
+
+Workbooks(Rtrak_file).Activate
+Range("AC115:AC" & lastrow_rtrak_closed).Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("C" & rows_rtrak_open + 1).Select
+ActiveSheet.Paste
+
+Workbooks(Rtrak_file).Activate
+Range("AD115:AD" & lastrow_rtrak_closed).Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("D" & rows_rtrak_open + 1).Select
+ActiveSheet.Paste
+
+Workbooks(Rtrak_file).Activate
+Range("AG115:AG" & lastrow_rtrak_closed).Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("E" & rows_rtrak_open + 1).Select
+ActiveSheet.Paste
+
+Workbooks(Rtrak_file).Activate
+Range("P115:P" & lastrow_rtrak_closed).Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("F" & rows_rtrak_open + 1).Select
+ActiveSheet.Paste
+
+
+Workbooks(Rtrak_file).Activate
+Range("AF115:AF" & lastrow_rtrak_closed).Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("G" & rows_rtrak_open + 1).Select
+ActiveSheet.Paste
+
+Workbooks(Rtrak_file).Activate
+Range("AT115:AT" & lastrow_rtrak_closed).Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("H" & rows_rtrak_open + 1).Select
+ActiveSheet.Paste
+
+ActiveWorkbook.Save
+
+Dim rows_rtrak As Integer
+rows_rtrak = Range("A1").End(xlDown).Row - 1
+
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("A1").AutoFilter Field:=1, _
+    Criteria1:=("*opp*"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(rows_rtrak + 1, 6)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("A1").AutoFilter Field:=1
+
+ActiveSheet.Range("A1").AutoFilter Field:=3, _
+    Criteria1:=("*FEDERAL*"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(rows_rtrak, 6)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("A1").AutoFilter Field:=3
+
+Selection.Columns.AutoFit
+Workbooks("Rtrak_rearranged.xls").Activate
+Cells(1, 9).Value = "check"
+Cells(2, 9).Select
+ActiveCell.FormulaR1C1 = "=CONCATENATE(RC[-6],"" - "",RC[-5])"
+Selection.Copy
+Range("I2:I" & rows_rtrak).Select
+ActiveSheet.Paste
+Selection.Copy
+Range("C2").Select
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+Range("D:D").Select
+Selection.Delete
+Range("H:H").Select
+Selection.Delete
+
+
+Selection.AutoFilter
+Cells(1, 8).Value = "check"
+Cells(2, 8).Select
+ActiveCell.FormulaR1C1 = "=CONCATENATE(RIGHT(TRIM(RC[-7]),8))"
+Selection.Copy
+Range("H2:H" & rows_rtrak).Select
+ActiveSheet.Paste
+Selection.Copy
+Range("A2").Select
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+
+
+Workbooks(DAP_file).Activate
+Cells(1, column_rtrakopp).EntireColumn.Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Sheets("Sheet2").Select
+ActiveSheet.Paste
+
+Columns("A:A").Select
+    Selection.TextToColumns Destination:=Range("A1"), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 2), TrailingMinusNumbers:=True
+    Range("A1").Select
+
+Sheets("Sheet1").Select
+Columns("A:A").Select
+    Selection.TextToColumns Destination:=Range("A1"), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 2), TrailingMinusNumbers:=True
+Cells(2, 8).EntireColumn.Select
+Selection.Delete
+Cells(1, 8).Value = "check"
+Cells(2, 8).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-7],Sheet2!R1C1:R60000C1,1,0)"
+Selection.Copy
+Range(Cells(2, 8), Cells(rows_rtrak, 8)).Select
+ActiveSheet.Paste
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("A1").AutoFilter Field:=8, _
+    Criteria1:=("<>#N/A"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(rows_rtrak, 8)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("A1").AutoFilter Field:=8
+
+Dim column_fin1, column_fin2, column_fin3, column_fin4 As Integer
+
+Workbooks.Open (path & "\Data inputs\" & Finance_file), UpdateLinks:=False
+Sheets("Dump(Managed View)").Select
+Rows("1:1").Select
+Selection.Find(What:="Opportunity Number", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_fin1 = ActiveCell.Column
+Selection.Find(What:="Hours YTD", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_fin2 = ActiveCell.Column
+Selection.Find(What:="Net Services YTD", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_fin3 = ActiveCell.Column
+Selection.Find(What:="WBS Element", After:=ActiveCell, LookIn:=xlFormulas, _
+        LookAt:=xlPart, SearchOrder:=xlByRows, SearchDirection:=xlNext, _
+        MatchCase:=False, SearchFormat:=False).Activate
+column_fin4 = ActiveCell.Column
+Workbooks("Rtrak_rearranged.xls").Activate
+Sheets("Sheet2").Select
+Range("A1").Select
+Cells.Select
+Selection.Delete
+Range("A1").Select
+Workbooks(Finance_file).Activate
+Cells(1, column_fin1).EntireColumn.Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+ActiveSheet.Paste
+Workbooks(Finance_file).Activate
+Cells(1, column_fin2).EntireColumn.Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("B1").Select
+ActiveSheet.Paste
+Workbooks(Finance_file).Activate
+Cells(1, column_fin3).EntireColumn.Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("C1").Select
+ActiveSheet.Paste
+Workbooks(Finance_file).Activate
+Cells(1, column_fin4).EntireColumn.Select
+Selection.Copy
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("D1").Select
+ActiveSheet.Paste
+Range("A:D").Select
+Selection.AutoFilter
+ActiveSheet.Range("A1").AutoFilter Field:=1, _
+    Criteria1:=(""), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(60000, 4)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("A1").AutoFilter Field:=1
+Cells(1, 5).Value = "check"
+Cells(2, 5).Select
+ActiveCell.FormulaR1C1 = "=right(RC[-4],8)"
+Selection.Copy
+row1 = Cells(1, 1).End(xlDown).Row
+Range(Cells(2, 5), Cells(row1, 5)).Select
+ActiveSheet.Paste
+Selection.Copy
+Range("A2").Select
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+
+Cells(2, 5).Select
+ActiveCell.FormulaR1C1 = "=left(RC[-1],8)"
+Selection.Copy
+row1 = Cells(1, 1).End(xlDown).Row
+Range(Cells(2, 5), Cells(row1, 5)).Select
+ActiveSheet.Paste
+Selection.Copy
+Range("D2").Select
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+
+
+Range("E:E").Select
+Selection.Delete
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Dim AllData3 As Range
+Set AllData3 = Selection.CurrentRegion
+Application.DisplayAlerts = False
+ActiveWorkbook.PivotCaches.Create(SourceType:=xlDatabase, SourceData:=AllData3 _
+        , Version:=xlPivotTableVersion14).CreatePivotTable _
+        TableDestination:="", TableName:="PivotTable1", _
+        DefaultVersion:=xlPivotTableVersion14
+        With ActiveSheet.PivotTables("PivotTable1").PivotFields("Opportunity Number")
+       .Orientation = xlRowField
+      .Position = 1
+    End With
+    ActiveSheet.PivotTables("PivotTable1").AddDataField ActiveSheet.PivotTables( _
+        "PivotTable1").PivotFields("Hours YTD"), "Sum of  Hours YTD", xlSum
+    ActiveSheet.PivotTables("PivotTable1").AddDataField ActiveSheet.PivotTables( _
+        "PivotTable1").PivotFields("Net Services YTD"), "Sum of  Net Services YTD", xlSum
+    Range("A1:C1").Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.Copy
+    Sheets("Sheet2").Select
+    Range("K1").Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+    Selection.Columns.AutoFit
+
+Sheets("Sheet1").Select
+Columns("A:A").Select
+    Selection.TextToColumns Destination:=Range("A1"), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 2), TrailingMinusNumbers:=True
+    Range("A1").Select
+Cells(2, 8).EntireColumn.Select
+Selection.Delete
+Cells(1, 8).Value = "check"
+Cells(2, 8).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-7],Sheet2!R1C11:R60000C12,2,0)"
+Selection.Copy
+Range(Cells(2, 8), Cells(rows_rtrak, 8)).Select
+ActiveSheet.Paste
+Selection.AutoFilter
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Range("A1").AutoFilter Field:=8, _
+    Criteria1:=("#N/A"), Operator:=xlOr, Criteria2:=("0"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(rows_rtrak, 8)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("A1").AutoFilter Field:=8
+Range("H:H").Select
+Selection.Copy
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+
+
+row1 = Cells(60000, 1).End(xlUp).Row
+base_pop_grp5 = row1 - 1
+ActiveSheet.Sort.SortFields.Clear
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, 6), Cells(row1, 6)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortTextAsNumbers
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, 7), Cells(row1, 7)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, 8), Cells(row1, 8)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+    With ActiveSheet.Sort
+        .SetRange Range(Cells(1, 1), Cells(row1, 8))
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+ActiveWorkbook.Save
+
+Workbooks("individual Group results.xls").Activate
+Sheets.Add
+ActiveSheet.Name = "Group 5"
+Workbooks("Rtrak_rearranged.xls").Activate
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+ActiveSheet.Paste
+Sheets.Add
+ActiveSheet.Name = "Finance"
+Workbooks("Rtrak_rearranged.xls").Activate
+Sheets("sheet2").Select
+Range("K1:M1").Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+ActiveSheet.Paste
+Range("A1").EntireColumn.Select
+    Selection.TextToColumns Destination:=Range("A1"), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 2), TrailingMinusNumbers:=True
+
+Workbooks("Rtrak_rearranged.xls").Activate
+Sheets("sheet2").Select
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Dim AllData5 As Range
+Set AllData5 = Selection.CurrentRegion
+Application.DisplayAlerts = False
+ActiveWorkbook.PivotCaches.Create(SourceType:=xlDatabase, SourceData:=AllData3 _
+        , Version:=xlPivotTableVersion14).CreatePivotTable _
+        TableDestination:="", TableName:="PivotTable1", _
+        DefaultVersion:=xlPivotTableVersion14
+        With ActiveSheet.PivotTables("PivotTable1").PivotFields("WBS Element")
+       .Orientation = xlRowField
+      .Position = 1
+    End With
+    ActiveSheet.PivotTables("PivotTable1").AddDataField ActiveSheet.PivotTables( _
+        "PivotTable1").PivotFields("Hours YTD"), "Sum of  Hours YTD", xlSum
+    ActiveSheet.PivotTables("PivotTable1").AddDataField ActiveSheet.PivotTables( _
+        "PivotTable1").PivotFields("Net Services YTD"), "Sum of  Net Services YTD", xlSum
+    Range("A1:C1").Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.Copy
+    Workbooks("individual Group results.xls").Activate
+    Sheets("Finance").Select
+    Range("H1").Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+    SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+    Selection.Columns.AutoFit
+
+Workbooks("Rtrak_rearranged.xls").Close savechanges:=True
+
+Workbooks(Finance_file).Close savechanges:=False
+Workbooks("individual Group results.xls").Activate
+Sheets("Group 5").Select
+Range("A1").EntireColumn.Select
+    Selection.TextToColumns Destination:=Range("A1"), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 2), TrailingMinusNumbers:=True
+Cells(1, 8).Value = "Hours YTD"
+Cells(1, 9).Value = "emp ID"
+Cells(2, 9).Select
+ActiveCell.FormulaR1C1 = "=TRIM(RC[-3])"
+Selection.Copy
+Range(Cells(2, 9), Cells(row1, 9)).Select
+ActiveSheet.Paste
+Selection.Copy
+Range("F2").Select
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+
+
+Workbooks(tracking_file).Activate
+Range(Cells(3, 4), Cells(3, 4).End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+Cells(1, 25).Select
+ActiveSheet.Paste
+
+Workbooks(tracking_file).Activate
+Range(Cells(3, 2), Cells(3, 2).End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+Cells(1, 26).Select
+ActiveSheet.Paste
+
+Cells(2, 9).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-3],R1C25:R60000C26,2,0)"
+Selection.Copy
+Range(Cells(2, 9), Cells(row1, 9)).Select
+ActiveSheet.Paste
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+Application.CutCopyMode = False
+Cells(1, 10).Value = "check"
+Cells(2, 10).Select
+
+Range(Cells(1, 25), Cells(1, 26)).EntireColumn.Select
+Selection.Delete
+
+Workbooks(tracking_file).Activate
+Range("B3:N3").Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+Cells(1, 25).Select
+ActiveSheet.Paste
+
+Cells(2, 10).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-1],R1C25:R60000C37,13,0)"
+Selection.Copy
+Range(Cells(2, 10), Cells(row1, 10)).Select
+ActiveSheet.Paste
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+Application.CutCopyMode = False
+
+If ActiveSheet.AutoFilterMode = True Then ActiveSheet.AutoFilterMode = False
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+
+ActiveSheet.Range("A1").AutoFilter Field:=10, _
+    Criteria1:=("<>yes"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(row1, 10)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("A1").AutoFilter Field:=10
+
+Range(Cells(1, 25), Cells(1, 37)).EntireColumn.Select
+Selection.Delete
+
+Cells(1, 10).EntireColumn.Select
+Selection.Delete
+Cells(1, 10).Value = "Actual DPS Hours (cumulative-YTD)"
+Cells(1, 11).Value = "Actual DPS Net Revenue (cumulative -YTD)"
+Cells(2, 10).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-9],Finance!R1C1:R60000C3,2,0)"
+Cells(2, 11).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-10],Finance!R1C1:R60000C3,3,0)"
+Range(Cells(2, 10), Cells(2, 11)).Select
+Selection.Copy
+row1 = Range("A60000").End(xlUp).Row
+Range(Cells(2, 10), Cells(row1, 11)).Select
+ActiveSheet.Paste
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+Cells(1, 8).EntireColumn.Select
+Selection.Delete
+Cells(1, 11).Value = "Engagement flag"
+Cells(2, 11).Select
+ActiveCell.Value = "G05"
+Selection.Copy
+Range(Cells(2, 11), Cells(row1, 11)).Select
+ActiveSheet.Paste
+
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+
+Sheets.Add
+ActiveSheet.Name = "Group5_1"
+Sheets("Group 5").Select
+Selection.Copy
+Sheets("Group5_1").Select
+ActiveSheet.Paste
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+
+
+ActiveSheet.Sort.SortFields.Clear
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, 8), Cells(row1, 8)), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:= _
+        xlSortTextAsNumbers
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, 9), Cells(row1, 9)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+    With ActiveSheet.Sort
+        .SetRange Range(Cells(1, 1), Cells(row1, 11))
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+
+ActiveSheet.Range("A1").RemoveDuplicates Columns:=1, Header:=xlYes
+ActiveSheet.Range("A1").RemoveDuplicates Columns:=6, Header:=xlYes
+
+row1 = Range("A60000").End(xlUp).Row
+
+ActiveSheet.Sort.SortFields.Clear
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, 9), Cells(row1, 9)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+    With ActiveSheet.Sort
+        .SetRange Range(Cells(1, 1), Cells(row1, 11))
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+
+
+
+ActiveWorkbook.Save
+
+Workbooks(Rtrak_file).Close savechanges:=False
+
+
+End Sub
+
+Sub Group6_7(DAP_file As String, column_A7_answer As Integer, column_A71_answer As Integer, column_A711_answer As Integer, column_A8_answer As Integer, column_E3_answer As Integer, column_rtrakopp As Integer, column_last As Integer)
+
+Dim row2 As Integer
+
+''''''''''''''''''''''''''''''Group 6
+
+Workbooks(DAP_file).Activate
+If ActiveSheet.AutoFilterMode = True Then ActiveSheet.AutoFilterMode = False
+Range(Cells(1, 1), Cells(1, 1).End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("R1").AutoFilter Field:=column_A7_answer, _
+    Criteria1:=Array("yes"), Operator:=xlFilterValues
+ActiveSheet.Range("R1").AutoFilter Field:=column_A71_answer, _
+    Criteria1:=Array("no"), Operator:=xlFilterValues
+ActiveSheet.Range("R1").AutoFilter Field:=column_A8_answer, _
+    Criteria1:=Array("no", "yes"), Operator:=xlFilterValues
+ActiveSheet.Range("R1").AutoFilter Field:=column_E3_answer, _
+    Criteria1:=("*E.3.2*"), Operator:=xlOr, Criteria2:=("*E.3.3*"), Operator:=xlFilterValues
+Workbooks("DAP shortlist.xls").Activate
+Sheets("Sheet2").Select
+Cells.Select
+Selection.Delete
+Workbooks(DAP_file).Activate
+Cells(1, column_rtrakopp).EntireColumn.Select
+Selection.Copy
+Workbooks("DAP shortlist.xls").Activate
+Range("A1").Select
+ActiveSheet.Paste
+Workbooks(DAP_file).Activate
+ActiveSheet.Range("R1").AutoFilter Field:=column_E3_answer, _
+    Criteria1:=("*E.3.4*"), Operator:=xlFilterValues
+Range(Cells(1, column_rtrakopp), Cells(1, column_rtrakopp).End(xlDown)).Select
+Selection.Copy
+Workbooks("DAP shortlist.xls").Activate
+Range("A60000").End(xlUp).Offset(1, 0).Select
+ActiveSheet.Paste
+Sheets("Sheet1").Select
+If ActiveSheet.AutoFilterMode = True Then ActiveSheet.AutoFilterMode = False
+Range(Cells(1, 1), Cells(1, 1).End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+Cells(2, column_last).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_last - column_rtrakopp & "],Sheet2!R1C1:R10000C1,1,0)"
+Selection.Copy
+Range(Cells(2, column_last), Cells(2, column_last).End(xlDown)).Select
+ActiveSheet.Paste
+ActiveSheet.Range("R1").AutoFilter Field:=column_last, _
+    Criteria1:=("<>#N/A"), Operator:=xlFilterValues
+Workbooks("individual Group results.xls").Activate
+Sheets.Add
+ActiveSheet.Name = "Group 6"
+Workbooks("DAP shortlist.xls").Activate
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+ActiveSheet.Paste
+Cells(2, column_last).Select
+row2 = Cells(60000, column_last).End(xlUp).Row
+Dim i As Integer
+For i = 2 To row2
+Cells(i, column_last).Value = "Group 6"
+Next i
+
+
+'''''''''''''''''''''''''''''Group 7
+
+Workbooks(DAP_file).Activate
+If ActiveSheet.AutoFilterMode = True Then ActiveSheet.AutoFilterMode = False
+Range(Cells(1, 1), Cells(1, 1).End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("R1").AutoFilter Field:=column_A7_answer, _
+    Criteria1:=Array("yes"), Operator:=xlFilterValues
+ActiveSheet.Range("R1").AutoFilter Field:=column_A71_answer, _
+    Criteria1:=Array("yes"), Operator:=xlFilterValues
+ActiveSheet.Range("R1").AutoFilter Field:=column_A711_answer, _
+    Criteria1:=Array("yes", "no"), Operator:=xlFilterValues
+ActiveSheet.Range("R1").AutoFilter Field:=column_A8_answer, _
+    Criteria1:=Array("no", "yes"), Operator:=xlFilterValues
+ActiveSheet.Range("R1").AutoFilter Field:=column_E3_answer, _
+    Criteria1:=("*E.3.2*"), Operator:=xlOr, Criteria2:=("*E.3.3*"), Operator:=xlFilterValues
+Workbooks("DAP shortlist.xls").Activate
+Sheets("Sheet2").Select
+Cells.Select
+Selection.Delete
+Workbooks(DAP_file).Activate
+Cells(1, column_rtrakopp).EntireColumn.Select
+Selection.Copy
+Workbooks("DAP shortlist.xls").Activate
+Range("A1").Select
+ActiveSheet.Paste
+Workbooks(DAP_file).Activate
+ActiveSheet.Range("R1").AutoFilter Field:=column_E3_answer, _
+    Criteria1:=("*E.3.4*"), Operator:=xlFilterValues
+Range(Cells(1, column_rtrakopp), Cells(1, column_rtrakopp).End(xlDown)).Select
+Selection.Copy
+Workbooks("DAP shortlist.xls").Activate
+Range("A60000").End(xlUp).Offset(1, 0).Select
+ActiveSheet.Paste
+Sheets("Sheet1").Select
+If ActiveSheet.AutoFilterMode = True Then ActiveSheet.AutoFilterMode = False
+Range(Cells(1, 1), Cells(1, 1).End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+Cells(2, column_last).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_last - column_rtrakopp & "],Sheet2!R1C1:R10000C1,1,0)"
+Selection.Copy
+Range(Cells(2, column_last), Cells(2, column_last).End(xlDown)).Select
+ActiveSheet.Paste
+ActiveSheet.Range("R1").AutoFilter Field:=column_last, _
+    Criteria1:=("<>#N/A"), Operator:=xlFilterValues
+Workbooks("individual Group results.xls").Activate
+Sheets.Add
+ActiveSheet.Name = "Group 7"
+Workbooks("DAP shortlist.xls").Activate
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+ActiveSheet.Paste
+Cells(2, column_last).Select
+row2 = Range(Selection, Selection.End(xlDown)).Rows.Count + 1
+For i = 2 To row2
+Cells(i, column_last).Value = "Group 7"
+Next i
+
+
+End Sub
+
+Sub Group8(Finance_file As String, column_last As Integer, column_wbs_code As Integer, column_rtrakopp As Integer)
+
+Dim row2 As Integer
+
+
+'''''''''''''''''''''''Group 9
+ActiveWorkbook.Sheets("R Channel Summary ").Activate
+Dim pvtName As String
+pvtName = ActiveSheet.PivotTables(1).Name
+
+ActiveSheet.PivotTables(pvtName).PivotFields("WBS Status").CurrentPage = _
+        "(All)"
+  With ActiveSheet.PivotTables(pvtName).PivotFields("WBS Status")
+      .PivotItems("Open").Visible = False
+  End With
+
+Sheets.Add
+ActiveSheet.Next.Select
+Range(Cells(9, 3), Cells(9, 3).End(xlDown)).Select
+Dim rows_fin As Integer
+rows_fin = Selection.Rows.Count
+Selection.Copy
+ActiveSheet.Previous.Select
+Range("A1").Select
+ActiveSheet.Paste
+Range("B1").Select
+ActiveSheet.Next.Select
+Range(Cells(9, 13), Cells(rows_fin + 8, 13).End(xlDown)).Select
+Selection.Copy
+ActiveSheet.Previous.Select
+ActiveSheet.Paste
+Range("C1").Select
+ActiveSheet.Next.Select
+Range(Cells(9, 16), Cells(rows_fin + 8, 16).End(xlDown)).Select
+Selection.Copy
+ActiveSheet.Previous.Select
+ActiveSheet.Paste
+Range("D1").Value = "check"
+Cells(2, 4).Select
+ActiveCell.FormulaR1C1 = "=LEFT(RC[-3],8)"
+Selection.Copy
+Cells(2, 1).End(xlDown).Offset(0, 3).Select
+Range(Selection, Selection.End(xlUp)).Select
+ActiveSheet.Paste
+Selection.Copy
+Range("A2").Select
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+
+Cells(2, 4).Select
+ActiveCell.FormulaR1C1 = "=TRIM(RIGHT(RC[-2],8))"
+Selection.Copy
+Cells(2, 1).End(xlDown).Offset(0, 3).Select
+Range(Selection, Selection.End(xlUp)).Select
+ActiveSheet.Paste
+Selection.Copy
+Range("B1").Select
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+
+Range("D:D").Select
+Selection.Delete
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+
+Dim row1 As Integer
+row1 = Cells(60000, 1).End(xlUp).Row
+ActiveSheet.Sort.SortFields.Clear
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, 2), Cells(row1, 2)), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:= _
+        xlSortTextAsNumbers
+    With ActiveSheet.Sort
+        .SetRange Range(Cells(1, 1), Cells(row1, 3))
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Dim AllData2 As Range
+Set AllData2 = Selection.CurrentRegion
+Application.DisplayAlerts = False
+ActiveWorkbook.PivotCaches.Create(SourceType:=xlDatabase, SourceData:=AllData2 _
+        , Version:=xlPivotTableVersion14).CreatePivotTable _
+        TableDestination:="", TableName:="PivotTable1", _
+        DefaultVersion:=xlPivotTableVersion14
+        With ActiveSheet.PivotTables("PivotTable1").PivotFields("WBS Element")
+       .Orientation = xlRowField
+      .Position = 1
+    End With
+    ActiveSheet.PivotTables("PivotTable1").AddDataField ActiveSheet.PivotTables( _
+        "PivotTable1").PivotFields(" Net Services YTD"), "Sum of  Net Services YTD", xlSum
+    Range("A1:B1").Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.Copy
+    ActiveSheet.Next.Select
+    Range("K1").Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+    Selection.Columns.AutoFit
+
+    Application.DisplayAlerts = True
+
+Range("M1").Value = "rtrak"
+Range("M2").Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-2],R2C1:R10000C2,2,0)"
+Selection.Copy
+Range("K1").End(xlDown).Offset(0, 2).Select
+Range(Selection, Selection.End(xlUp)).Select
+ActiveSheet.Paste
+Range("M:M").Select
+Selection.Copy
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+
+Range("K:M").Select
+Selection.AutoFilter
+ActiveSheet.Range("L1").AutoFilter Field:=2, Criteria1:=">100000", Operator:=xlAnd
+Range("K1:M1").Select
+Range(Selection, Selection.End(xlDown)).Select
+
+Workbooks("DAP shortlist.xls").Activate
+Sheets("sheet2").Select
+Cells.Select
+Selection.Delete
+Range("A1").Select
+Workbooks(Finance_file).Activate
+Selection.Copy
+Workbooks("DAP shortlist.xls").Activate
+ActiveSheet.Paste
+Sheets("sheet1").Select
+ActiveSheet.Range("A1").AutoFilter Field:=column_last
+Cells(2, column_last).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(LEFT(RC[-" & column_last - column_wbs_code & "],8),Sheet2!R2C1:R10000C1,1,0)"
+Selection.Copy
+Range(Cells(2, column_last), Cells(2, column_last).End(xlDown)).Select
+ActiveSheet.Paste
+ActiveSheet.Range("A1").AutoFilter Field:=column_last, _
+    Criteria1:=("<>#N/A"), Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+Sheets.Add
+ActiveSheet.Name = "Group 8"
+Workbooks("DAP shortlist.xls").Activate
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+ActiveSheet.Paste
+Workbooks("DAP shortlist.xls").Activate
+ActiveSheet.Range("A1").AutoFilter Field:=column_last
+Cells(1, column_rtrakopp).EntireColumn.Select
+    Selection.TextToColumns Destination:=Cells(1, column_rtrakopp), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 2), TrailingMinusNumbers:=True
+Cells(2, column_last).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(LEFT(RC[-" & column_last - column_rtrakopp & "],8),Sheet2!R2C3:R10000C3,1,0)"
+Selection.Copy
+Range(Cells(2, column_last), Cells(2, column_last).End(xlDown)).Select
+ActiveSheet.Paste
+ActiveSheet.Range("A1").AutoFilter Field:=column_last, _
+    Criteria1:=("<>#N/A"), Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+Range("A60000").End(xlUp).Offset(1, 0).Select
+ActiveSheet.Paste
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Range("A1").RemoveDuplicates Columns:=column_rtrakopp, Header:=xlNo
+Cells(2, column_last).Select
+Range(Selection, Selection.End(xlDown)).Select
+row2 = Selection.Rows.Count + 1
+
+Dim i As Integer
+
+For i = 2 To row2
+Cells(i, column_last).Value = "Group 8"
+Next i
+
+End Sub
+
+Sub Group9_10(DAP_file As String, column_subtype As Integer, column_ClientIndustry As Integer, column_enddate As Integer, column_Status As Integer, column_rtrakopp As Integer, path As String, tracking_file As String, column_last As Integer, column_empid As Integer, column_D10_answer As Integer, column_D8_answer As Integer, column_A92_answer As Integer, base_pop_grp9 As Integer, engagement_end_date As Date, engagement_start_date As Date, column_indtype As Integer)
+
+Dim row2 As Integer
+
+'''''''''''''''''''''''''''''''Group 9
+
+Workbooks(DAP_file).Activate
+Selection.AutoFilter
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("A1").AutoFilter Field:=column_subtype, _
+    Criteria1:=Array("EL", "SOW", "SUBCON"), Operator:=xlFilterValues
+ActiveSheet.Range("D1").AutoFilter Field:=column_indtype, _
+    Criteria1:="<>*FED*", Operator:=xlFilterValues
+ActiveSheet.Range("D1").AutoFilter Field:=column_enddate, _
+    Criteria1:="<=" & engagement_end_date, Operator:=xlAnd, Criteria2:= _
+        ">=" & engagement_start_date, Operator:=xlFilterValues
+ActiveSheet.Range("C1").AutoFilter Field:=column_Status, _
+    Criteria1:="<>*Discontinued*", Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks.Add
+ActiveSheet.Paste
+Application.CutCopyMode = False
+Selection.Columns.AutoFit
+Range("A1").Select
+Application.DisplayAlerts = False
+ActiveWorkbook.SaveAs path & "\Intermediate files\DAP shortlist2.xls"
+Application.DisplayAlerts = True
+
+Workbooks(tracking_file).Activate
+Range("B3:N3").Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("DAP shortlist2.xls").Activate
+Sheets("sheet2").Select
+ActiveSheet.Paste
+Application.CutCopyMode = False
+Sheets("sheet1").Select
+Cells(2, column_last).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_last - column_empid & "],Sheet2!R1C1:R2000C13,13,0)"
+Selection.Copy
+Cells(2, column_empid).Select
+Selection.End(xlDown).Select
+Dim row1 As Integer
+row1 = ActiveCell.Row
+Range(Cells(2, column_last), Cells(row1, column_last)).Select
+ActiveSheet.Paste
+Cells(1, column_last).EntireColumn.Select
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("A1").AutoFilter Field:=column_last, _
+    Criteria1:=("<>yes"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(row1, column_last)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+Range("A1").Select
+ActiveSheet.Range("A1").AutoFilter Field:=column_last
+
+base_pop_grp9 = Range("A60000").End(xlUp).Row - 1
+
+ActiveSheet.Range("A1").RemoveDuplicates Columns:=column_rtrakopp, Header:= _
+        xlYes
+ActiveSheet.Range("C1").AutoFilter Field:=column_D10_answer, _
+    Criteria1:="yes", Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Workbooks("individual Group results.xls").Activate
+Sheets.Add
+ActiveSheet.Name = "Group 9"
+Workbooks("DAP shortlist2.xls").Activate
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+ActiveSheet.Paste
+Dim row7 As Integer
+row7 = Cells(2, column_empid).End(xlDown).Row
+Range(Cells(2, column_last), Cells(row7, column_last)).Select
+row2 = Selection.Rows.Count + 1
+Dim i As Integer
+For i = 2 To row2
+Cells(i, column_last).Value = "Group 9"
+Next i
+
+'''''''''''''''''''''''Group 10
+
+Workbooks("DAP shortlist2.xls").Activate
+ActiveSheet.Range("C1").AutoFilter Field:=column_D10_answer
+ActiveSheet.Range("C1").AutoFilter Field:=column_D8_answer, _
+    Criteria1:="yes", Operator:=xlFilterValues
+
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Workbooks("individual Group results.xls").Activate
+Sheets.Add
+ActiveSheet.Name = "Group 10"
+Workbooks("DAP shortlist2.xls").Activate
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+ActiveSheet.Paste
+Workbooks("DAP shortlist2.xls").Activate
+ActiveSheet.Range("C1").AutoFilter Field:=column_D8_answer
+ActiveSheet.Range("C1").AutoFilter Field:=column_A92_answer, _
+    Criteria1:="yes", Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+Range("A60000").End(xlUp).Offset(1, 0).Select
+ActiveSheet.Paste
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Range("A1").RemoveDuplicates Columns:=column_rtrakopp, Header:=xlNo
+Range(Cells(2, column_last), Cells(2, column_last).End(xlDown)).Select
+row2 = Selection.Rows.Count + 1
+For i = 2 To row2
+Cells(i, column_last).Value = "Group 10"
+Next i
+
+End Sub
+
+
+Sub Group13_14(DAP_file As String, column_indtype As Integer, column_feedback As Integer, column_startdate As Integer, column_Status As Integer, path As String, tracking_file As String, column_last As Integer, column_empid As Integer, column_rtrakopp As Integer, column_subtype As Integer, column_enddate As Integer, engagement_end_date As Date, engagement_start_date As Date, base_pop_grp13 As Integer, base_pop_grp14 As Integer)
+
+'''''''''''''''''''''''''''''''Group 13
+Dim row1 As Integer
+
+Workbooks(DAP_file).Activate
+Sheets("sheet1").Select
+Range("A1").Select
+Selection.AutoFilter
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("D1").AutoFilter Field:=column_indtype, _
+    Criteria1:="<>*FED*", Operator:=xlFilterValues
+ActiveSheet.Range("D1").AutoFilter Field:=column_feedback, _
+    Criteria1:="Needs Improvement", Operator:=xlFilterValues
+Dim group14_date, group14_date1 As Date
+group14_date = Date - 365
+group14_date1 = Date
+ActiveSheet.Range("D1").AutoFilter Field:=column_startdate, _
+    Criteria1:=">=" & group14_date, Operator:=xlAnd, Criteria2:="<=" & group14_date1, Operator:=xlFilterValues
+ActiveSheet.Range("C1").AutoFilter Field:=column_Status, _
+    Criteria1:="<>*Discontinued*", Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+
+Selection.Copy
+Workbooks.Add
+ActiveSheet.Paste
+Application.DisplayAlerts = False
+ActiveWorkbook.SaveAs path & "\Intermediate files\Group 13 results.xls"
+Application.DisplayAlerts = True
+
+Workbooks(tracking_file).Activate
+Range("B3:N3").Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("Group 13 results.xls").Activate
+Sheets("sheet2").Select
+ActiveSheet.Paste
+Sheets("sheet1").Select
+Cells(2, column_last).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_last - column_empid & "],Sheet2!R1C1:R2000C13,13,0)"
+Selection.Copy
+row1 = Cells(2, column_empid).End(xlDown).Row
+Range(Cells(2, column_last), Cells(row1, column_last)).Select
+ActiveSheet.Paste
+Cells(2, column_last).EntireColumn.Select
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+Cells(1, column_last).Value = "check"
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("A1").AutoFilter Field:=column_last, _
+    Criteria1:=("<>yes"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(row1, column_last)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("A1").AutoFilter Field:=column_last
+base_pop_grp13 = Range("A60000").End(xlUp).Row - 1
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Range("A1").RemoveDuplicates Columns:=column_rtrakopp, Header:=xlYes
+row1 = Range(Cells(1, column_last), Cells(1, column_last).End(xlDown)).Rows.Count
+
+
+Range(Cells(1, column_empid), Cells(1, column_empid).End(xlDown)).Select
+Selection.Copy
+Sheets("Sheet3").Select
+ActiveSheet.Paste
+Range("B1").Select
+ActiveSheet.Paste
+Range("B1").Value = "EngagementLeaderEmployeeID1"
+Range("A1:B1").Select
+Range(Selection, Selection.End(xlDown)).Select
+
+Dim AllData4 As Range
+Set AllData4 = Selection.CurrentRegion
+Application.DisplayAlerts = False
+ActiveWorkbook.PivotCaches.Create(SourceType:=xlDatabase, SourceData:=AllData4 _
+        , Version:=xlPivotTableVersion14).CreatePivotTable _
+        TableDestination:="", TableName:="PivotTable1", _
+        DefaultVersion:=xlPivotTableVersion14
+        With ActiveSheet.PivotTables("PivotTable1").PivotFields("EngagementLeaderEmployeeID")
+       .Orientation = xlRowField
+       .Position = 1
+    End With
+    ActiveSheet.PivotTables("PivotTable1").AddDataField ActiveSheet.PivotTables( _
+        "PivotTable1").PivotFields("EngagementLeaderEmployeeID1"), "Count of EngagementLeaderEmployeeID", xlCount
+Range("A1:B1").Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Range("K1").Select
+ActiveSheet.Paste
+Sheets("Sheet1").Select
+Cells(2, column_last).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_last - column_empid & "],Sheet4!R1C11:R60000C12,2,0)"
+Selection.Copy
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Paste
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks:=False, Transpose:=False
+
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Workbooks("individual Group results.xls").Activate
+Sheets.Add
+ActiveSheet.Name = "Group 13"
+Workbooks("Group 13 results.xls").Activate
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+ActiveSheet.Paste
+
+
+''''''''''''''''''''''''''''''''Group 14
+
+Workbooks(DAP_file).Activate
+Selection.AutoFilter
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("D1").AutoFilter Field:=column_subtype, _
+    Criteria1:=("Cross-FSS"), Operator:=xlFilterValues
+ActiveSheet.Range("D1").AutoFilter Field:=column_indtype, _
+    Criteria1:="<>*FED*", Operator:=xlFilterValues
+ActiveSheet.Range("D1").AutoFilter Field:=column_enddate, _
+    Criteria1:="<=" & engagement_end_date, Operator:=xlAnd, Criteria2:= _
+        ">=" & engagement_start_date, Operator:=xlFilterValues
+ActiveSheet.Range("C1").AutoFilter Field:=column_Status, _
+    Criteria1:="<>*Discontinued*", Operator:=xlFilterValues
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Workbooks("individual Group results.xls").Activate
+Sheets.Add
+Workbooks(DAP_file).Activate
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+ActiveSheet.Paste
+Application.CutCopyMode = False
+
+    Range("A1").Select
+ActiveSheet.Name = "Group 14"
+Cells(2, column_last + 6).Select
+Workbooks(tracking_file).Activate
+Range("B3:N3").Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("individual Group results.xls").Activate
+ActiveSheet.Paste
+Cells(2, column_last).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_last - column_empid & "],R1C" & column_last + 6 & ":R1000C" & column_last + 18 & ",13,0)"
+Cells(2, column_last).Select
+Selection.Copy
+Cells(2, column_empid).Select
+Selection.End(xlDown).Select
+row1 = ActiveCell.Row
+Cells(row1, column_last).Select
+Range(Selection, Selection.End(xlUp)).Select
+ActiveSheet.Paste
+Cells(2, column_last).EntireColumn.Select
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+Cells(1, column_last).Value = "check"
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("A1").AutoFilter Field:=column_last, _
+    Criteria1:=("<>yes"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(row1, column_last)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+Selection.AutoFilter
+
+base_pop_grp14 = Range("A60000").End(xlUp).Row - 1
+Range(Cells(1, column_last + 6), Cells(1, column_last + 18)).EntireColumn.Delete
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Range("A1").RemoveDuplicates Columns:=column_rtrakopp, Header:= _
+        xlYes
+Cells(2, column_last).Select
+Range(Selection, Selection.End(xlDown)).Select
+Dim i As Integer
+row1 = Selection.Rows.Count + 1
+For i = 2 To row1
+Cells(i, column_last).Value = "Group 14"
+Next i
+
+
+End Sub
+
+Sub get_freq(column_rtrakopp As Integer, column_last As Integer, column_empid As Integer)
+
+Dim i As Integer
+Workbooks("individual Group results.xls").Activate
+Sheets.Add
+ActiveSheet.Name = "consolidated1"
+Range("A1").Select
+
+For i = 1 To 4
+Range("A100000").End(xlUp).Offset(1, 0).Select
+Sheets("Group " & i).Select
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Sheets("consolidated1").Select
+ActiveSheet.Paste
+Next i
+
+For i = 6 To 19
+Range("A100000").End(xlUp).Offset(1, 0).Select
+Sheets("Group " & i).Select
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Sheets("consolidated1").Select
+ActiveSheet.Paste
+Next i
+
+Application.CutCopyMode = False
+Rows("1:1").Select
+Selection.Delete
+
+Cells(1, column_rtrakopp).Offset(0, -1).Select
+If ActiveCell.Column = column_rtrakopp Then
+Columns("column_rtrakopp+1:column_last-2").Select
+Selection.Delete
+Else
+Range(Cells(1, 1), Cells(1, column_rtrakopp - 1)).EntireColumn.Select
+Selection.Delete
+Range(Cells(1, column_rtrakopp), Cells(1, column_last - 2)).EntireColumn.Select
+Selection.Delete
+End If
+Range("B1").Select
+Dim row3 As Integer
+row3 = Range(Selection, Selection.End(xlDown)).Rows.Count
+Range("B1").EntireColumn.Select
+Selection.Delete
+Range("A1").EntireColumn.Select
+
+Selection.AutoFilter
+ActiveSheet.Range("A1").AutoFilter Field:=1, _
+     Criteria1:="RTrakOpportunityNumber", Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(row3, 2)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+Selection.AutoFilter
+Range("A1").Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Range("B1").Select
+ActiveSheet.Paste
+Range("B1").Value = "RTrakOpportunityNumber1"
+    Columns("A:A").Select
+    Selection.TextToColumns Destination:=Range("A1"), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 2), TrailingMinusNumbers:=True
+    Range("A1").Select
+
+    Columns("B:B").Select
+    Selection.TextToColumns Destination:=Range("B1"), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 2), TrailingMinusNumbers:=True
+    Range("B1").Select
+
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Dim AllData1 As Range
+Set AllData1 = Selection.CurrentRegion
+Application.DisplayAlerts = False
+ActiveWorkbook.PivotCaches.Create(SourceType:=xlDatabase, SourceData:=AllData1 _
+        , Version:=xlPivotTableVersion14).CreatePivotTable _
+        TableDestination:="", TableName:="PivotTable1", _
+        DefaultVersion:=xlPivotTableVersion14
+        With ActiveSheet.PivotTables("PivotTable1").PivotFields("RTrakOpportunityNumber")
+       .Orientation = xlRowField
+      .Position = 1
+    End With
+    ActiveSheet.PivotTables("PivotTable1").AddDataField ActiveSheet.PivotTables( _
+        "PivotTable1").PivotFields("RTrakOpportunityNumber1"), "Count of RTrakOpportunityNumber1", xlCount
+    Range("A1:B1").Select
+    Range(Selection, Selection.End(xlDown)).Select
+    Selection.Copy
+    ActiveSheet.Next.Select
+    Range("K1").Select
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+    Selection.Columns.AutoFit
+    ActiveSheet.Previous.Select
+    ActiveWindow.SelectedSheets.Delete
+Application.DisplayAlerts = True
+ActiveWorkbook.Save
+
+
+'''''''''''''''appending for frequency
+
+For i = 1 To 4
+Sheets("Group " & i).Select
+    Cells(1, column_rtrakopp).EntireColumn.Select
+    Selection.TextToColumns Destination:=Cells(1, column_rtrakopp), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 2), TrailingMinusNumbers:=True
+Cells(2, column_last + 1).Select
+Dim column_diff2 As Integer
+column_diff2 = column_last + 1 - column_rtrakopp
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_diff2 & "],consolidated1!R2C11:R5000C12,2,0)"
+Selection.Copy
+Cells(1, column_empid).Select
+Selection.End(xlDown).Select
+Dim row1 As Integer
+row1 = ActiveCell.Row - 1
+Range(Cells(3, column_last + 1), Cells(row1 + 1, column_last + 1)).Select
+ActiveSheet.Paste
+Application.CutCopyMode = False
+Cells(1, column_last + 1).Select
+ActiveCell.Value = "Freq"
+Next i
+
+For i = 6 To 19
+Sheets("Group " & i).Select
+    Cells(1, column_rtrakopp).EntireColumn.Select
+    Selection.TextToColumns Destination:=Cells(1, column_rtrakopp), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 2), TrailingMinusNumbers:=True
+
+Cells(2, column_last + 1).Select
+column_diff2 = column_last + 1 - column_rtrakopp
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_diff2 & "],consolidated1!R2C11:R5000C12,2,0)"
+Selection.Copy
+Cells(1, column_empid).Select
+Selection.End(xlDown).Select
+row1 = ActiveCell.Row - 1
+Range(Cells(2, column_last + 1), Cells(row1 + 1, column_last + 1)).Select
+ActiveSheet.Paste
+Application.CutCopyMode = False
+Cells(1, column_last + 1).Select
+ActiveCell.Value = "Freq"
+Next i
+
+
+
+'''''''''Adding individual sheets for groups
+For i = 1 To 4
+Sheets("Group " & i).Select
+Sheets.Add
+ActiveSheet.Name = "Group" & i & "_1"
+Next i
+
+For i = 6 To 19
+Sheets("Group " & i).Select
+Sheets.Add
+ActiveSheet.Name = "Group" & i & "_1"
+Next i
+
+End Sub
+
+
+Sub individual_grouping(column_empid As Integer, column_last As Integer, column_revenue As Integer)
+
+Call individual_grouping4("Group 1", "Group1_1", column_empid, column_last, column_revenue)
+Call individual_grouping4("Group 2", "Group2_1", column_empid, column_last, column_revenue)
+Call individual_grouping4("Group 3", "Group3_1", column_empid, column_last, column_revenue)
+Call individual_grouping4("Group 4", "Group4_1", column_empid, column_last, column_revenue)
+'Call individual_grouping4("Group 5", "Group5_1", column_empid, column_last, column_revenue)
+Call individual_grouping4("Group 6", "Group6_1", column_empid, column_last, column_revenue)
+Call individual_grouping4("Group 7", "Group7_1", column_empid, column_last, column_revenue)
+Call individual_grouping4("Group 8", "Group8_1", column_empid, column_last, column_revenue)
+Call individual_grouping4("Group 9", "Group9_1", column_empid, column_last, column_revenue)
+Call individual_grouping4("Group 10", "Group10_1", column_empid, column_last, column_revenue)
+Call individual_grouping4("Group 11", "Group11_1", column_empid, column_last, column_revenue)
+Call individual_grouping4("Group 12", "Group12_1", column_empid, column_last, column_revenue)
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''update code or group 13 here
+
+Sheets("Group 13").Select
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+
+Selection.Columns.AutoFit
+Selection.Copy
+
+Sheets("Group13_1").Select
+ActiveSheet.Paste
+Selection.AutoFilter
+
+ActiveSheet.Sort.SortFields.Clear
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_empid), Cells(2, column_empid).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:= _
+        xlSortTextAsNumbers
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_last + 1), Cells(2, column_last + 1).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_revenue), Cells(2, column_revenue).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+    With ActiveSheet.Sort
+        .SetRange Range(Cells(1, 1), Cells(60000, column_last + 1))
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+
+ActiveSheet.Range("A1").RemoveDuplicates Columns:=column_empid, Header:=xlYes
+
+ActiveSheet.Sort.SortFields.Clear
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_last), Cells(2, column_last).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_last + 1), Cells(2, column_last + 1).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_revenue), Cells(2, column_revenue).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+    With ActiveSheet.Sort
+        .SetRange Range(Cells(1, 1), Cells(60000, column_last + 1))
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+Range("A1").Select
+
+Cells(2, column_last).Select
+ActiveCell.Value = "Group 13"
+Selection.Copy
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Paste
+
+
+'''''''''''''''''''''''''''''''''Group 13 code ends
+
+Call individual_grouping4("Group 14", "Group14_1", column_empid, column_last, column_revenue)
+Call individual_grouping4("Group 15", "Group15_1", column_empid, column_last, column_revenue)
+Call individual_grouping4("Group 16", "Group16_1", column_empid, column_last, column_revenue)
+Call individual_grouping4("Group 17", "Group17_1", column_empid, column_last, column_revenue)
+Call individual_grouping4("Group 18", "Group18_1", column_empid, column_last, column_revenue)
+
+'''''''''''''''''''''''''''''''''''''''''''''''''''''update code or group 19 here
+
+Sheets("Group 19").Select
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+
+Selection.Columns.AutoFit
+Selection.Copy
+
+Sheets("Group19_1").Select
+ActiveSheet.Paste
+Selection.AutoFilter
+
+ActiveSheet.Sort.SortFields.Clear
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_empid), Cells(2, column_empid).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:= _
+        xlSortTextAsNumbers
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_last + 1), Cells(2, column_last + 1).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_last), Cells(2, column_last).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_revenue), Cells(2, column_revenue).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+    With ActiveSheet.Sort
+        .SetRange Range(Cells(1, 1), Cells(60000, column_last + 1))
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+
+ActiveSheet.Range("A1").RemoveDuplicates Columns:=column_empid, Header:=xlYes
+
+ActiveSheet.Sort.SortFields.Clear
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_last + 1), Cells(2, column_last + 1).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_last), Cells(2, column_last).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_revenue), Cells(2, column_revenue).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+    With ActiveSheet.Sort
+        .SetRange Range(Cells(1, 1), Cells(60000, column_last + 1))
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+Range("A1").Select
+
+Cells(2, column_last).Select
+ActiveCell.Value = "Group 19"
+Selection.Copy
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Paste
+
+
+'''''''''''''''''''''''''''''''''Group 19 code ends
+
+
+
+End Sub
+
+
+Sub individual_grouping4(Sheetname1 As String, sheetname2 As String, column_empid As Integer, column_last As Integer, column_revenue As Integer)
+
+
+Sheets(Sheetname1).Select
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+
+Selection.Columns.AutoFit
+Selection.Copy
+
+Sheets(sheetname2).Select
+ActiveSheet.Paste
+Selection.AutoFilter
+
+ActiveSheet.Sort.SortFields.Clear
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_empid), Cells(2, column_empid).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:= _
+        xlSortTextAsNumbers
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_last + 1), Cells(2, column_last + 1).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_revenue), Cells(2, column_revenue).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+    With ActiveSheet.Sort
+        .SetRange Range(Cells(1, 1), Cells(60000, column_last + 1))
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+
+ActiveSheet.Range("A1").RemoveDuplicates Columns:=column_empid, Header:= _
+        xlYes
+
+ActiveSheet.Sort.SortFields.Clear
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_last + 1), Cells(2, column_last + 1).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+ActiveSheet.Sort.SortFields.Add Key:=Range _
+        (Cells(2, column_revenue), Cells(2, column_revenue).End(xlDown)), SortOn:=xlSortOnValues, Order:=xlDescending, DataOption:= _
+        xlSortNormal
+    With ActiveSheet.Sort
+        .SetRange Range(Cells(1, 1), Cells(60000, column_last + 1))
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .SortMethod = xlPinYin
+        .Apply
+    End With
+Range("A1").Select
+
+End Sub
+
+Sub individual_grouping_part2(column_last As Integer, column_rtrakopp As Integer, column_empid As Integer, column_wbs_code As Integer)
+
+Workbooks("QRM automation tool.xlsm").Activate
+Sheets("Interface").Select
+
+Dim Group1_samples As String
+Dim Group2_samples As String
+Dim Group3_samples As String
+Dim Group4_samples As String
+Dim Group5_samples As String
+Dim Group6_samples As String
+Dim Group7_samples As String
+Dim Group8_samples As String
+Dim Group9_samples As String
+Dim Group10_samples As String
+Dim Group11_samples As String
+Dim Group12_samples As String
+Dim Group13_samples As String
+Dim Group14_samples As String
+Dim Group15_samples As String
+Dim Group16_samples As String
+Dim Group17_samples As String
+Dim Group18_samples As String
+Dim Group19_samples As String
+
+Group1_samples = Range("Group1_samples").Value
+Group2_samples = Range("Group2_samples").Value
+Group3_samples = Range("Group3_samples").Value
+Group4_samples = Range("Group4_samples").Value
+Group5_samples = Range("Group5_samples").Value
+Group6_samples = Range("Group6_samples").Value
+Group7_samples = Range("Group7_samples").Value
+Group8_samples = Range("Group8_samples").Value
+Group9_samples = Range("Group9_samples").Value
+Group10_samples = Range("Group10_samples").Value
+Group11_samples = Range("Group11_samples").Value
+Group12_samples = Range("Group12_samples").Value
+Group13_samples = Range("Group13_samples").Value
+Group14_samples = Range("Group14_samples").Value
+Group15_samples = Range("Group15_samples").Value
+Group16_samples = Range("Group16_samples").Value
+Group17_samples = Range("Group17_samples").Value
+Group18_samples = Range("Group18_samples").Value
+Group19_samples = Range("Group19_samples").Value
+
+Workbooks("individual Group results.xls").Activate
+Sheets("Group1_1").Select
+Sheets.Add
+ActiveSheet.Name = "Group1_2"
+Sheets.Add
+ActiveSheet.Name = "consolidated_part2"
+
+Sheets("Group1_1").Select
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Sheets("Group1_2").Select
+ActiveSheet.Paste
+Application.CutCopyMode = False
+Selection.Columns.AutoFit
+
+If IsNumeric(Group1_samples) = False Then
+Selection.Copy
+Sheets("consolidated_part2").Select
+Range("A1").Select
+ActiveSheet.Paste
+Application.CutCopyMode = False
+Else
+Range(Cells(1, 1), Cells(Group1_samples + 1, column_last + 2)).Select
+Selection.Copy
+Sheets("consolidated_part2").Select
+Range("A1").Select
+ActiveSheet.Paste
+End If
+Range("A1000000").End(xlUp).Offset(1, 0).Select
+
+Call individual_grouping3("Group2_1", "Group2_2", "Group2_3", "Group2_4", column_empid, column_rtrakopp, column_last, Group2_samples)
+Call individual_grouping3("Group3_1", "Group3_2", "Group3_3", "Group3_4", column_empid, column_rtrakopp, column_last, Group3_samples)
+Call individual_grouping3("Group4_1", "Group4_2", "Group4_3", "Group4_4", column_empid, column_rtrakopp, column_last, Group4_samples)
+Call individual_grouping3("Group6_1", "Group6_2", "Group6_3", "Group6_4", column_empid, column_rtrakopp, column_last, Group6_samples)
+Call individual_grouping3("Group7_1", "Group7_2", "Group7_3", "Group7_4", column_empid, column_rtrakopp, column_last, Group7_samples)
+Call individual_grouping3("Group8_1", "Group8_2", "Group8_3", "Group8_4", column_empid, column_rtrakopp, column_last, Group8_samples)
+Call individual_grouping3("Group9_1", "Group9_2", "Group9_3", "Group9_4", column_empid, column_rtrakopp, column_last, Group9_samples)
+Call individual_grouping3("Group10_1", "Group10_2", "Group10_3", "Group10_4", column_empid, column_rtrakopp, column_last, Group10_samples)
+Call individual_grouping3("Group11_1", "Group11_2", "Group11_3", "Group11_4", column_empid, column_rtrakopp, column_last, Group11_samples)
+Call individual_grouping3("Group12_1", "Group12_2", "Group12_3", "Group12_4", column_empid, column_rtrakopp, column_last, Group12_samples)
+Call individual_grouping3("Group13_1", "Group13_2", "Group13_3", "Group13_4", column_empid, column_rtrakopp, column_last, Group13_samples)
+Call individual_grouping3("Group14_1", "Group14_2", "Group14_3", "Group14_4", column_empid, column_rtrakopp, column_last, Group14_samples)
+Call individual_grouping3("Group15_1", "Group15_2", "Group15_3", "Group15_4", column_empid, column_rtrakopp, column_last, Group15_samples)
+Call individual_grouping3("Group16_1", "Group16_2", "Group16_3", "Group16_4", column_empid, column_rtrakopp, column_last, Group16_samples)
+Call individual_grouping3("Group17_1", "Group17_2", "Group17_3", "Group17_4", column_empid, column_rtrakopp, column_last, Group17_samples)
+Call individual_grouping3("Group18_1", "Group18_2", "Group18_3", "Group18_4", column_empid, column_rtrakopp, column_last, Group18_samples)
+Call individual_grouping3("Group19_1", "Group19_2", "Group19_3", "Group19_4", column_empid, column_rtrakopp, column_last, Group19_samples)
+
+Sheets("consolidated_part2").Select
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+
+ActiveSheet.Range("A1").AutoFilter Field:=column_rtrakopp, _
+    Criteria1:=("RTrakOpportunityNumber"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(10000, column_last)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("A1").AutoFilter Field:=column_rtrakopp
+
+Cells(1, column_rtrakopp).EntireColumn.Select
+    Selection.TextToColumns Destination:=Cells(1, column_rtrakopp), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 2), TrailingMinusNumbers:=True
+
+Selection.AutoFilter
+Cells(1, column_last + 3).Value = "Actual DPS Hours (cumulative-YTD)"
+Cells(1, column_last + 4).Value = "Actual DPS Net Revenue (cumulative -YTD)"
+Cells(2, column_last + 3).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_last + 3 - column_rtrakopp & "],Finance!R1C1:R60000C3,2,0)"
+Cells(2, column_last + 4).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_last + 4 - column_rtrakopp & "],Finance!R1C1:R60000C3,3,0)"
+Range(Cells(2, column_last + 3), Cells(2, column_last + 4)).Select
+Selection.Copy
+Dim row1 As Integer
+row1 = Cells(60000, column_last).End(xlUp).Row
+Range(Cells(row1, column_last + 3), Cells(row1, column_last + 4)).Select
+Range(Selection, Selection.End(xlUp)).Select
+ActiveSheet.Paste
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+
+Dim i As Integer
+For i = 2 To row1
+Cells(i, column_last + 3).Select
+If WorksheetFunction.IsNA(Cells(i, column_last + 3)) Then
+ActiveCell.FormulaR1C1 = "=VLOOKUP(Left(RC[-" & column_last + 3 - column_wbs_code & "],8),Finance!R1C8:R60000C10,2,0)"
+Cells(i, column_last + 4).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(Left(RC[-" & column_last + 4 - column_wbs_code & "],8),Finance!R1C8:R60000C10,3,0)"
+End If
+Next i
+
+Range(Cells(1, column_last + 3), Cells(1, column_last + 4)).EntireColumn.Select
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+
+Dim row5 As Integer
+
+Sheets("Group5_1").Select
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Sheets.Add
+ActiveSheet.Name = "Group5_2"
+Sheets.Add
+ActiveSheet.Name = "Group5_3"
+Sheets("Group5_1").Select
+Selection.Copy
+Sheets("Group5_2").Select
+ActiveSheet.Paste
+
+Cells(1, 12).Value = "check"
+Cells(2, 12).Select
+ActiveCell.FormulaR1C1 = "=vlookup(RC[-4],consolidated_part2!R1C" & column_empid & ":R60000C" & column_empid & ",1,0)"
+Selection.Copy
+row5 = Cells(1, 1).End(xlDown).Row
+Range(Cells(2, 12), Cells(row5, 12)).Select
+ActiveSheet.Paste
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+ActiveSheet.Range("A1").AutoFilter Field:=12, _
+    Criteria1:=("<>#N/A"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(60000, column_last)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("A1").AutoFilter Field:=12
+
+row5 = Cells(60000, 1).End(xlUp).Row
+If row5 <> 1 Then
+If IsNumeric(Group5_samples) = False Then
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Sheets("Group5_3").Select
+Range("A1").Select
+ActiveSheet.Paste
+Application.CutCopyMode = False
+Else
+Range(Cells(1, 1), Cells(Group5_samples + 1, 11)).Select
+Selection.Copy
+Sheets("Group5_3").Select
+Range("A1").Select
+ActiveSheet.Paste
+Application.CutCopyMode = False
+End If
+Cells(2, 11).Select
+ActiveCell.Value = "Group 5"
+Selection.Copy
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Paste
+End If
+
+ActiveWorkbook.Save
+
+End Sub
+
+
+Sub individual_grouping3(Sheetname1 As String, sheetname2 As String, sheetname3 As String, sheetname4 As String, column_empid As Integer, column_rtrakopp As Integer, column_last As Integer, sample_num As String)
+
+Sheets(Sheetname1).Select
+Sheets.Add
+ActiveSheet.Name = sheetname2
+Sheets.Add
+ActiveSheet.Name = sheetname3
+Sheets.Add
+ActiveSheet.Name = sheetname4
+
+Sheets(Sheetname1).Select
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+
+Sheets(sheetname2).Select
+Range("A1").Select
+ActiveSheet.Paste
+Application.CutCopyMode = False
+Cells(1, column_last + 2).Value = "check2"
+Cells(2, column_last + 2).Select
+
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_last - column_rtrakopp + 2 & "],consolidated_part2!R1C" & column_rtrakopp & ":R100000C" & column_rtrakopp & ",1,0)"
+Selection.Copy
+Dim row1 As Integer
+row1 = Range("A10000").End(xlUp).Row
+Range(Cells(2, column_last + 2), Cells(row1, column_last + 2)).Select
+ActiveSheet.Paste
+Cells(1, column_last + 2).EntireColumn.Select
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+
+
+Application.CutCopyMode = False
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+
+
+ActiveSheet.Range("A1").AutoFilter Field:=column_last + 2, _
+    Criteria1:=("<>#N/A"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(1000, column_last)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("A1").AutoFilter Field:=column_last + 2
+row1 = Range("A10000").End(xlUp).Row
+
+If row1 <> 1 Then
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Sheets(sheetname3).Select
+ActiveSheet.Paste
+
+Cells(2, column_last + 2).Select
+
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_last - column_empid + 2 & "],consolidated_part2!R1C" & column_empid & ":R1000C" & column_empid & ",1,0)"
+Selection.Copy
+Range(Cells(2, column_last + 2), Cells(row1, column_last + 2)).Select
+ActiveSheet.Paste
+
+Cells(1, column_last + 2).EntireColumn.Select
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+
+
+Application.CutCopyMode = False
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+
+
+ActiveSheet.Range("A1").AutoFilter Field:=column_last + 2, _
+    Criteria1:=("<>#N/A"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(1000, column_last)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("A1").AutoFilter Field:=column_last + 2
+
+Dim row2 As Integer
+row2 = Range("A10000").End(xlUp).Row
+
+If row2 <> 1 Then
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+If IsNumeric(sample_num) = False Then
+Selection.Copy
+Sheets(sheetname4).Select
+Range("A1").Select
+ActiveSheet.Paste
+Application.CutCopyMode = False
+Else
+Range(Cells(1, 1), Cells(sample_num + 1, column_last + 2)).Select
+Selection.Copy
+Sheets(sheetname4).Select
+Range("A1").Select
+ActiveSheet.Paste
+Application.CutCopyMode = False
+End If
+
+Selection.Columns.AutoFit
+
+Selection.Copy
+Sheets("consolidated_part2").Select
+ActiveSheet.Paste
+Range("A1").End(xlDown).Offset(1, 0).Select
+End If
+End If
+
+End Sub
+
+
+Sub consolidation_part1(column_last, column_rtrakopp As Integer, column_wbs_code As Integer)
+
+''''''''''''''''consolidation!''''''''''''
+
+Sheets("Group1_1").Select
+Sheets.Add
+ActiveSheet.Name = "Consolidation-part1"
+Cells(1, column_last + 2).Value = "Engagement_flag"
+Cells(1, column_last + 3).Value = "priority1"
+Dim j As Integer
+Dim i As Integer
+
+Sheets("Group 1").Select
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+
+Sheets("Consolidation-part1").Select
+Range("A1").Select
+ActiveSheet.Paste
+
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+Dim row_1 As Integer
+row_1 = Range(Cells(1, 1), Cells(1, 1).End(xlDown)).Rows.Count
+'Cells(2, column_last + 3).Select
+
+'ActiveCell.FormulaR1C1 = "=COUNTIF(RC[-" & column_last - column_rtrakopp + 3 & "]:R" & row_con + 1 & "C" & column_rtrakopp & ",RC[-" & column_last - column_rtrakopp + 3 & "])"
+
+'Selection.Copy
+'Range(Cells(3, column_last + 3), Cells(row_con + 2, column_last + 3)).Select
+'ActiveSheet.Paste
+'Application.CutCopyMode = False
+Cells(2, column_last + 2).Select
+Cells(2, column_last + 2).Value = "G01"
+Selection.Copy
+Range(Cells(2, column_last + 2), Cells(row_1, column_last + 2)).Select
+ActiveSheet.Paste
+
+For i = 2 To 4
+Sheets("Group " & i).Select
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+
+Sheets("Consolidation-part1").Select
+Range("A60000").End(xlUp).Offset(1, 0).Select
+ActiveSheet.Paste
+If ActiveSheet.AutoFilterMode = True Then ActiveSheet.AutoFilterMode = False
+
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+Dim row_con As Integer
+Cells(100000, column_last + 1).End(xlUp).Select
+row_con = Range(Selection, Selection.End(xlUp)).Rows.Count - 1
+Cells(2, column_last + 3).Select
+
+ActiveCell.FormulaR1C1 = "=COUNTIF(RC[-" & column_last - column_rtrakopp + 3 & "]:R" & row_con + 1 & "C" & column_rtrakopp & ",RC[-" & column_last - column_rtrakopp + 3 & "])"
+
+Selection.Copy
+Range(Cells(2, column_last + 3), Cells(row_con + 1, column_last + 3)).Select
+ActiveSheet.Paste
+Application.CutCopyMode = False
+
+For j = 1 To row_con - 1
+Cells(j + 1, column_last + 2).Select
+Dim Engagement_flag As String
+Engagement_flag = Cells(j + 2, column_last + 2).Value
+If Cells(j + 2, column_last + 3).Value = 2 Then
+Cells(j + 2, column_last + 2).Value = Engagement_flag & ";G0" & i
+Else: If Engagement_flag = "" Then Cells(j + 2, column_last + 2).Value = "G0" & i
+End If
+Next j
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Range(Cells(1, 1), Cells(row_con + 1, column_last + 3)).RemoveDuplicates Columns:=column_rtrakopp, Header:= _
+        xlNo
+    Range("A1").Select
+Next i
+
+
+For i = 6 To 9
+
+Sheets("Group " & i).Select
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+
+Sheets("Consolidation-part1").Select
+Range("A100000").End(xlUp).Offset(1, 0).Select
+ActiveSheet.Paste
+If ActiveSheet.AutoFilterMode = True Then ActiveSheet.AutoFilterMode = False
+
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+Cells(100000, column_last + 1).End(xlUp).Select
+row_con = Range(Selection, Selection.End(xlUp)).Rows.Count - 1
+Cells(2, column_last + 3).Select
+
+ActiveCell.FormulaR1C1 = "=COUNTIF(RC[-" & column_last - column_rtrakopp + 3 & "]:R" & row_con + 1 & "C" & column_rtrakopp & ",RC[-" & column_last - column_rtrakopp + 3 & "])"
+
+Selection.Copy
+Range(Cells(2, column_last + 3), Cells(row_con + 1, column_last + 3)).Select
+ActiveSheet.Paste
+Application.CutCopyMode = False
+
+For j = 1 To row_con - 1
+Cells(j + 1, column_last + 2).Select
+
+Engagement_flag = Cells(j + 2, column_last + 2).Value
+If Cells(j + 2, column_last + 3).Value = 2 Then
+Cells(j + 2, column_last + 2).Value = Engagement_flag & ";G0" & i
+Else: If Engagement_flag = "" Then Cells(j + 2, column_last + 2).Value = "G0" & i
+End If
+Next j
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Range(Cells(1, 1), Cells(row_con + 1, column_last + 3)).RemoveDuplicates Columns:=column_rtrakopp, Header:= _
+        xlNo
+    Range("A1").Select
+Next i
+
+
+For i = 10 To 19
+
+Sheets("Group " & i).Select
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+
+Sheets("Consolidation-part1").Select
+Range("A100000").End(xlUp).Offset(1, 0).Select
+ActiveSheet.Paste
+If ActiveSheet.AutoFilterMode = True Then ActiveSheet.AutoFilterMode = False
+
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+Cells(100000, column_last + 1).End(xlUp).Select
+row_con = Range(Selection, Selection.End(xlUp)).Rows.Count - 1
+Cells(2, column_last + 3).Select
+
+ActiveCell.FormulaR1C1 = "=COUNTIF(RC[-" & column_last - column_rtrakopp + 3 & "]:R" & row_con + 1 & "C" & column_rtrakopp & ",RC[-" & column_last - column_rtrakopp + 3 & "])"
+
+Selection.Copy
+Range(Cells(2, column_last + 3), Cells(row_con + 1, column_last + 3)).Select
+ActiveSheet.Paste
+Application.CutCopyMode = False
+
+For j = 1 To row_con - 1
+Cells(j + 1, column_last + 2).Select
+
+Engagement_flag = Cells(j + 2, column_last + 2).Value
+If Cells(j + 2, column_last + 3).Value = 2 Then
+Cells(j + 2, column_last + 2).Value = Engagement_flag & ";G" & i
+Else: If Engagement_flag = "" Then Cells(j + 2, column_last + 2).Value = "G" & i
+End If
+Next j
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+ActiveSheet.Range(Cells(1, 1), Cells(row_con + 1, column_last + 3)).RemoveDuplicates Columns:=column_rtrakopp, Header:= _
+        xlNo
+    Range("A1").Select
+Next i
+
+Cells.Select
+Selection.Columns.AutoFit
+ActiveSheet.Range("A1").AutoFilter Field:=column_rtrakopp, _
+    Criteria1:=("RTrakOpportunityNumber"), Operator:=xlFilterValues
+ActiveSheet.Range(Cells(1, 1), Cells(10000, column_last + 3)).Offset(1, 0).SpecialCells _
+    (xlCellTypeVisible).EntireRow.Delete
+ActiveSheet.Range("A1").AutoFilter Field:=column_rtrakopp
+Cells(1, column_rtrakopp).EntireColumn.Select
+    Selection.TextToColumns Destination:=Cells(1, column_rtrakopp), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=False, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 2), TrailingMinusNumbers:=True
+Range("A1").Select
+Selection.AutoFilter
+
+Cells(1, column_last + 4).Value = "Actual DPS Hours (cumulative-YTD)"
+Cells(1, column_last + 5).Value = "Actual DPS Net Revenue (cumulative -YTD)"
+Cells(2, column_last + 4).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_last + 4 - column_rtrakopp & "],Finance!R1C1:R60000C3,2,0)"
+Cells(2, column_last + 5).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & column_last + 5 - column_rtrakopp & "],Finance!R1C1:R60000C3,3,0)"
+Range(Cells(2, column_last + 4), Cells(2, column_last + 5)).Select
+Selection.Copy
+Dim row1 As Integer
+row1 = Cells(60000, column_last).End(xlUp).Row
+Range(Cells(row1, column_last + 4), Cells(row1, column_last + 5)).Select
+Range(Selection, Selection.End(xlUp)).Select
+ActiveSheet.Paste
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+   Application.CutCopyMode = False
+
+For i = 2 To row1
+Cells(i, column_last + 4).Select
+If WorksheetFunction.IsNA(Cells(i, column_last + 4)) Then
+ActiveCell.FormulaR1C1 = "=VLOOKUP(Left(RC[-" & column_last + 4 - column_wbs_code & "],8),Finance!R1C8:R60000C10,2,0)"
+Cells(i, column_last + 5).Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(Left(RC[-" & column_last + 5 - column_wbs_code & "],8),Finance!R1C8:R60000C10,3,0)"
+End If
+Next i
+
+Range(Cells(1, column_last + 4), Cells(1, column_last + 5)).EntireColumn.Select
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+
+End Sub
+
+
+Sub populating_deliverable(path As String, column_last As Integer, column_empid As Integer, column_rtrakopp As Integer, base_pop1 As Integer, column_client_name As Integer, column_engagement_risk As Integer, column_wbs_code As Integer, column_rtrak_estvalue As Integer, column_moff As Integer, column_shortname As Integer, column_indtype As Integer, column_leadername As Integer, column_qrmempname As Integer, column_dapid As Integer, column_msuboff As Integer, column_revenue As Integer, base_pop_grp1 As Integer, base_pop_grp2 As Integer, base_pop_grp9 As Integer, base_pop_grp5 As Integer, base_pop_grp13 As Integer, base_pop_grp14 As Integer, base_pop_grp15 As Integer, base_pop_grp18 As Integer, OTHER_REVIEWS As String)
+
+Dim row1 As Integer
+Dim i As Integer
+Dim string1, string2 As String
+
+Workbooks.Open path & "\Data Inputs\" & OTHER_REVIEWS
+Workbooks("individual group results.xls").Activate
+Sheets.Add
+ActiveSheet.Name = "other reviews"
+
+Workbooks(OTHER_REVIEWS).Activate
+Range("B2:F2").Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+
+Workbooks("individual group results.xls").Activate
+ActiveSheet.Paste
+Application.CutCopyMode = False
+Workbooks(OTHER_REVIEWS).Close savechanges:=False
+
+Range("F1").Value = "Other inspections / reviews"
+Range("C:C").Select
+    Selection.Replace What:="X", Replacement:="Financial Statement Audit", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+Range("D:D").Select
+    Selection.Replace What:="X", Replacement:="SOC 1 Internal", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+Range("E:E").Select
+    Selection.Replace What:="X", Replacement:="Peer Review (SOC 1)", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+row1 = Range("A1").End(xlDown).Row
+
+For i = 2 To row1
+Dim c As Range
+string1 = ""
+For Each c In Range(Cells(i, 3), Cells(i, 5))
+If Trim(c) <> "" Then
+string1 = string1 & " ; " & c.Value
+End If
+Next c
+string2 = Mid(string1, 4, 300)
+Range("F" & i).Value = string2
+Next i
+
+Workbooks("QRM automation tool.xlsm").Activate
+Sheets("Interface").Select
+
+Dim max_exceptions As Integer
+
+Dim samples(19) As String
+
+For i = 1 To 19
+samples(i) = Range("Group" & i & "_samples").Value
+Next i
+
+
+IncrementalProgress.Increment 90, "Populating final deliverable..."
+
+Workbooks("individual Group results.xls").Activate
+Sheets("consolidated1").Select
+row1 = Range("K60000").End(xlUp).Row - 1
+Range("M2").Select
+ActiveCell.FormulaR1C1 = "=MAX(RC[-1]:R[" & row1 - 2 & "]C[-1])"
+max_exceptions = Range("M2").Value
+
+Workbooks.Open (path & "\Output\Final deliverable.xlsb"), UpdateLinks:=False
+Sheets("Summary").Select
+
+For i = 1 To 19
+Range("J" & i + 6).Value = samples(i)
+Next i
+
+Workbooks("individual Group results.xls").Activate
+
+Dim selected(19) As Integer
+
+Sheets("Group1_2").Select
+selected(1) = Range("A10000").End(xlUp).End(xlUp).Row - 1
+
+Sheets("Group5_3").Select
+selected(5) = Range("A10000").End(xlUp).Row - 1
+
+For i = 2 To 4
+Sheets("Group" & i & "_4").Select
+selected(i) = Range("A10000").End(xlUp).Row - 1
+Next i
+
+For i = 6 To 19
+Sheets("Group" & i & "_4").Select
+selected(i) = Range("A10000").End(xlUp).Row - 1
+Next i
+
+
+Dim column4 As Integer
+
+'''''''''''''''''''''''''all samples tab
+
+Sheets("consolidated_part2").Select
+Sheets.Add
+ActiveSheet.Name = "consolidated_part2_1"
+ActiveSheet.Next.Select
+
+Cells(1, column_rtrakopp).EntireColumn.Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Range("A1").Select
+ActiveSheet.Paste
+Sheets("consolidated_part2").Select
+
+Cells(1, column_dapid).EntireColumn.Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Range("B1").Select
+ActiveSheet.Paste
+Sheets("consolidated_part2").Select
+
+Cells(1, column_client_name).EntireColumn.Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Range("C1").Select
+ActiveSheet.Paste
+Sheets("consolidated_part2").Select
+
+Cells(1, column_engagement_risk).EntireColumn.Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Range("D1").Select
+ActiveSheet.Paste
+Sheets("consolidated_part2").Select
+
+Cells(1, column_wbs_code).EntireColumn.Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Range("E1").Select
+ActiveSheet.Paste
+Sheets("consolidated_part2").Select
+
+Cells(1, column_rtrak_estvalue).EntireColumn.Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Range("F1").Select
+ActiveSheet.Paste
+Sheets("consolidated_part2").Select
+
+Cells(1, column_moff).EntireColumn.Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Range("G1").Select
+ActiveSheet.Paste
+Sheets("consolidated_part2").Select
+
+
+Cells(1, column_msuboff).EntireColumn.Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Range("H1").Select
+ActiveSheet.Paste
+Sheets("consolidated_part2").Select
+
+
+Cells(1, column_shortname).EntireColumn.Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Range("I1").Select
+ActiveSheet.Paste
+Sheets("consolidated_part2").Select
+
+
+Cells(1, column_indtype).EntireColumn.Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Range("J1").Select
+ActiveSheet.Paste
+Sheets("consolidated_part2").Select
+
+
+Cells(1, column_revenue).EntireColumn.Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Range("K1").Select
+ActiveSheet.Paste
+Sheets("consolidated_part2").Select
+
+
+Cells(1, column_leadername).EntireColumn.Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Range("L1").Select
+ActiveSheet.Paste
+Sheets("consolidated_part2").Select
+
+
+Cells(1, column_qrmempname).EntireColumn.Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Range("M1").Select
+ActiveSheet.Paste
+Sheets("consolidated_part2").Select
+
+
+Cells(1, column_empid).EntireColumn.Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Range("N1").Select
+ActiveSheet.Paste
+Sheets("consolidated_part2").Select
+
+Cells(1, column_last + 3).EntireColumn.Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Range("O1").Select
+ActiveSheet.Paste
+Sheets("consolidated_part2").Select
+
+Cells(1, column_last + 4).EntireColumn.Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Range("P1").Select
+ActiveSheet.Paste
+Sheets("consolidated_part2").Select
+
+Cells(1, column_last).EntireColumn.Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Range("Q1").Select
+ActiveSheet.Paste
+Range("Q1").Value = "Primary Criteria"
+Dim row_samples, row_exceptions As Integer
+row_samples = Range("A60000").End(xlUp).Offset(1, 0).Row
+Sheets("Group5_3").Select
+Dim row5 As Integer
+row5 = Range("A60000").End(xlUp).Row
+If row5 <> 1 Then
+
+
+'''''rtrak number
+Sheets("Group5_3").Select
+Range(Cells(2, 1), Cells(row5, 1)).Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Cells(row_samples, 1).Select
+ActiveSheet.Paste
+
+''''client name
+Sheets("Group5_3").Select
+Range(Cells(2, 4), Cells(row5, 4)).Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Cells(row_samples, 3).Select
+ActiveSheet.Paste
+
+''''estimated value
+Sheets("Group5_3").Select
+Range(Cells(2, 7), Cells(row5, 7)).Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Cells(row_samples, 6).Select
+ActiveSheet.Paste
+
+'''''market offering
+Sheets("Group5_3").Select
+Range(Cells(2, 2), Cells(row5, 2)).Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Cells(row_samples, 7).Select
+ActiveSheet.Paste
+
+'''''engagement short name
+Sheets("Group5_3").Select
+Range(Cells(2, 5), Cells(row5, 5)).Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Cells(row_samples, 9).Select
+ActiveSheet.Paste
+
+'''''engagement industry type
+Sheets("Group5_3").Select
+Range(Cells(2, 3), Cells(row5, 3)).Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Cells(row_samples, 10).Select
+ActiveSheet.Paste
+
+''''engagement leader name
+Sheets("Group5_3").Select
+Range(Cells(2, 6), Cells(row5, 6)).Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Cells(row_samples, 12).Select
+ActiveSheet.Paste
+
+''''engagement leader employee ID
+Sheets("Group5_3").Select
+Range(Cells(2, 8), Cells(row5, 8)).Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Cells(row_samples, 14).Select
+ActiveSheet.Paste
+
+''''Hours YTD
+Sheets("Group5_3").Select
+Range(Cells(2, 9), Cells(row5, 9)).Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Cells(row_samples, 15).Select
+ActiveSheet.Paste
+
+''''revenue YTD
+Sheets("Group5_3").Select
+Range(Cells(2, 10), Cells(row5, 10)).Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Cells(row_samples, 16).Select
+ActiveSheet.Paste
+
+''''Groups flagged for
+Sheets("Group5_3").Select
+Range(Cells(2, 11), Cells(row5, 11)).Select
+Selection.Copy
+Sheets("consolidated_part2_1").Select
+Cells(row_samples, 17).Select
+ActiveSheet.Paste
+
+End If
+
+'''''''''''''''''all exceptions tab
+
+Sheets("Consolidation-part1").Select
+Sheets.Add
+ActiveSheet.Name = "Consolidation-part1_1"
+ActiveSheet.Next.Select
+
+
+Cells(1, column_rtrakopp).EntireColumn.Select
+Selection.Copy
+Sheets("Consolidation-part1_1").Select
+Range("A1").Select
+ActiveSheet.Paste
+Sheets("Consolidation-part1").Select
+
+Cells(1, column_dapid).EntireColumn.Select
+Selection.Copy
+Sheets("Consolidation-part1_1").Select
+Range("B1").Select
+ActiveSheet.Paste
+Sheets("Consolidation-part1").Select
+
+Cells(1, column_client_name).EntireColumn.Select
+Selection.Copy
+Sheets("Consolidation-part1_1").Select
+Range("C1").Select
+ActiveSheet.Paste
+Sheets("Consolidation-part1").Select
+
+Cells(1, column_engagement_risk).EntireColumn.Select
+Selection.Copy
+Sheets("Consolidation-part1_1").Select
+Range("D1").Select
+ActiveSheet.Paste
+Sheets("Consolidation-part1").Select
+
+Cells(1, column_wbs_code).EntireColumn.Select
+Selection.Copy
+Sheets("Consolidation-part1_1").Select
+Range("E1").Select
+ActiveSheet.Paste
+Sheets("Consolidation-part1").Select
+
+Cells(1, column_rtrak_estvalue).EntireColumn.Select
+Selection.Copy
+Sheets("Consolidation-part1_1").Select
+Range("F1").Select
+ActiveSheet.Paste
+Sheets("Consolidation-part1").Select
+
+Cells(1, column_moff).EntireColumn.Select
+Selection.Copy
+Sheets("Consolidation-part1_1").Select
+Range("G1").Select
+ActiveSheet.Paste
+Sheets("Consolidation-part1").Select
+
+
+Cells(1, column_msuboff).EntireColumn.Select
+Selection.Copy
+Sheets("Consolidation-part1_1").Select
+Range("H1").Select
+ActiveSheet.Paste
+Sheets("Consolidation-part1").Select
+
+
+Cells(1, column_shortname).EntireColumn.Select
+Selection.Copy
+Sheets("Consolidation-part1_1").Select
+Range("I1").Select
+ActiveSheet.Paste
+Sheets("Consolidation-part1").Select
+
+
+Cells(1, column_indtype).EntireColumn.Select
+Selection.Copy
+Sheets("Consolidation-part1_1").Select
+Range("J1").Select
+ActiveSheet.Paste
+Sheets("Consolidation-part1").Select
+
+
+Cells(1, column_revenue).EntireColumn.Select
+Selection.Copy
+Sheets("Consolidation-part1_1").Select
+Range("K1").Select
+ActiveSheet.Paste
+Sheets("Consolidation-part1").Select
+
+
+Cells(1, column_leadername).EntireColumn.Select
+Selection.Copy
+Sheets("Consolidation-part1_1").Select
+Range("L1").Select
+ActiveSheet.Paste
+Sheets("Consolidation-part1").Select
+
+
+Cells(1, column_qrmempname).EntireColumn.Select
+Selection.Copy
+Sheets("Consolidation-part1_1").Select
+Range("M1").Select
+ActiveSheet.Paste
+Sheets("Consolidation-part1").Select
+
+
+Cells(1, column_empid).EntireColumn.Select
+Selection.Copy
+Sheets("Consolidation-part1_1").Select
+Range("N1").Select
+ActiveSheet.Paste
+Sheets("Consolidation-part1").Select
+
+Cells(1, column_last + 4).EntireColumn.Select
+Selection.Copy
+Sheets("Consolidation-part1_1").Select
+Range("O1").Select
+ActiveSheet.Paste
+Sheets("Consolidation-part1").Select
+
+Cells(1, column_last + 5).EntireColumn.Select
+Selection.Copy
+Sheets("Consolidation-part1_1").Select
+Range("P1").Select
+ActiveSheet.Paste
+Sheets("Consolidation-part1").Select
+
+Cells(1, column_last + 2).EntireColumn.Select
+Selection.Copy
+Sheets("Consolidation-part1_1").Select
+Range("Q1").Select
+ActiveSheet.Paste
+Range("Q1").Value = "Groups Flagged For"
+row_exceptions = Range("A60000").End(xlUp).Offset(1, 0).Row
+Sheets("Group 5").Select
+row5 = Range("A60000").End(xlUp).Row
+
+If row5 <> 1 Then
+
+'''''rtrak number
+Sheets("Group 5").Select
+Range(Cells(2, 1), Cells(row5, 1)).Select
+Selection.Copy
+Sheets("consolidation-part1_1").Select
+Cells(row_exceptions, 1).Select
+ActiveSheet.Paste
+
+''''client name
+Sheets("Group 5").Select
+Range(Cells(2, 4), Cells(row5, 4)).Select
+Selection.Copy
+Sheets("consolidation-part1_1").Select
+Cells(row_exceptions, 3).Select
+ActiveSheet.Paste
+
+''''estimated value
+Sheets("Group 5").Select
+Range(Cells(2, 7), Cells(row5, 7)).Select
+Selection.Copy
+Sheets("consolidation-part1_1").Select
+Cells(row_exceptions, 6).Select
+ActiveSheet.Paste
+
+'''''market offering
+Sheets("Group 5").Select
+Range(Cells(2, 2), Cells(row5, 2)).Select
+Selection.Copy
+Sheets("consolidation-part1_1").Select
+Cells(row_exceptions, 7).Select
+ActiveSheet.Paste
+
+'''''engagement short name
+Sheets("Group 5").Select
+Range(Cells(2, 5), Cells(row5, 5)).Select
+Selection.Copy
+Sheets("consolidation-part1_1").Select
+Cells(row_exceptions, 9).Select
+ActiveSheet.Paste
+
+'''''engagement industry type
+Sheets("Group 5").Select
+Range(Cells(2, 3), Cells(row5, 3)).Select
+Selection.Copy
+Sheets("consolidation-part1_1").Select
+Cells(row_exceptions, 10).Select
+ActiveSheet.Paste
+
+''''engagement leader name
+Sheets("Group 5").Select
+Range(Cells(2, 6), Cells(row5, 6)).Select
+Selection.Copy
+Sheets("consolidation-part1_1").Select
+Cells(row_exceptions, 12).Select
+ActiveSheet.Paste
+
+''''engagement leader employee ID
+Sheets("Group 5").Select
+Range(Cells(2, 8), Cells(row5, 8)).Select
+Selection.Copy
+Sheets("consolidation-part1_1").Select
+Cells(row_exceptions, 14).Select
+ActiveSheet.Paste
+
+''''Hours YTD
+Sheets("Group 5").Select
+Range(Cells(2, 9), Cells(row5, 9)).Select
+Selection.Copy
+Sheets("consolidation-part1_1").Select
+Cells(row_exceptions, 15).Select
+ActiveSheet.Paste
+
+''''revenue YTD
+Sheets("Group 5").Select
+Range(Cells(2, 10), Cells(row5, 10)).Select
+Selection.Copy
+Sheets("consolidation-part1_1").Select
+Cells(row_exceptions, 16).Select
+ActiveSheet.Paste
+
+''''Primary Criteria
+Sheets("Group 5").Select
+Range(Cells(2, 11), Cells(row5, 11)).Select
+Selection.Copy
+Sheets("consolidation-part1_1").Select
+Cells(row_exceptions, 17).Select
+ActiveSheet.Paste
+
+End If
+
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+
+Selection.Copy
+
+Workbooks("Final deliverable.xlsb").Activate
+Sheets("Eligible Population").Select
+Range("B14").Select
+Workbooks("individual Group results.xls").Activate
+Selection.Copy
+Workbooks("Final deliverable.xlsb").Activate
+ActiveSheet.Paste
+Application.CutCopyMode = False
+
+
+    With Selection.Interior
+        .Pattern = xlNone
+        .TintAndShade = 0
+        .PatternTintAndShade = 0
+    End With
+    Selection.Borders(xlDiagonalDown).LineStyle = xlNone
+    Selection.Borders(xlDiagonalUp).LineStyle = xlNone
+    With Selection.Borders(xlEdgeLeft)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlEdgeTop)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlEdgeBottom)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlEdgeRight)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlInsideVertical)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlInsideHorizontal)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    Range("B14").Select
+    
+Range(Selection, Selection.End(xlToRight)).Select
+    With Selection.Font
+        .Name = "Calibri"
+        .Size = 11
+        .Strikethrough = False
+        .Superscript = False
+        .Subscript = False
+        .OutlineFont = False
+        .Shadow = False
+        .Underline = xlUnderlineStyleNone
+        .TintAndShade = 0
+        .ThemeFont = xlThemeFontMinor
+    End With
+    With Selection.Interior
+        .Pattern = xlSolid
+        .PatternColorIndex = xlAutomatic
+        .ThemeColor = xlThemeColorLight2
+        .TintAndShade = -0.499984740745262
+        .PatternTintAndShade = 0
+    End With
+    With Selection.Font
+        .ThemeColor = xlThemeColorDark1
+        .TintAndShade = 0
+    End With
+    Selection.Font.Bold = True
+    Range("B14").Select
+
+row1 = Range("R60000").End(xlUp).Row
+Range(Cells(14, 18), Cells(row1, 18)).Select
+Selection.Copy
+Range("S14").Select
+ActiveSheet.Paste
+    Selection.TextToColumns Destination:=Range("S14"), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=True, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 1), TrailingMinusNumbers:=True
+    Range(Cells(1, 19), Cells(1, 18 + max_exceptions)).EntireColumn.Select
+    Selection.Replace What:="G01", Replacement:="abc2", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+        Selection.Replace What:="G02", Replacement:="abc3", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+        Selection.Replace What:="G03", Replacement:="abc4", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+        Selection.Replace What:="G04", Replacement:="abc5", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    
+    Selection.Replace What:="G05", Replacement:="abc5", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    
+    Selection.Replace What:="G06", Replacement:="abc6", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    
+    Selection.Replace What:="G07", Replacement:="abc7", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    
+    Selection.Replace What:="G08", Replacement:="abc8", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G09", Replacement:="abc9", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G10", Replacement:="abc10", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G11", Replacement:="abc11", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G12", Replacement:="abc12", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G13", Replacement:="abc13", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G14", Replacement:="abc14", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G15", Replacement:="abc15", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G16", Replacement:="abc16", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G17", Replacement:="abc17", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G18", Replacement:="abc18", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G19", Replacement:="abc19", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+Range("S14").Value = "Primary Criteria"
+
+For i = 2 To max_exceptions
+Cells(14, i + 18).Value = "Secondary Criteria - " & i - 1
+Next i
+Cells(14, 18 + max_exceptions + 1).Value = "Other inspections / reviews"
+Sheets("Validation").Visible = True
+Sheets("Validation").Select
+
+Range("K:Q").Select
+Selection.Delete
+Range("K1").Select
+Workbooks("individual group results.xls").Activate
+Sheets("other reviews").Select
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Workbooks("Final deliverable.xlsb").Activate
+ActiveSheet.Paste
+
+Sheets("Eligible Population").Select
+Cells(15, 18 + max_exceptions + 1).Select
+ActiveCell.FormulaR1C1 = "=vlookup(RC[-" & max_exceptions + 4 & "],Validation!R1C12:R60000C16,5,0)"
+Selection.Copy
+row1 = ActiveCell.Offset(0, 0 - max_exceptions).End(xlDown).Offset(0, max_exceptions).Row
+Range(Cells(15, 18 + max_exceptions + 1), Cells(row1, 18 + max_exceptions + 1)).Select
+ActiveSheet.Paste
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+Application.CutCopyMode = False
+
+For i = 15 To row1
+Cells(i, 18 + max_exceptions + 1).Select
+If WorksheetFunction.IsNA(Cells(i, 18 + max_exceptions + 1)) Then
+ActiveCell.Value = ""
+End If
+Next i
+
+Range(Cells(14, 18 + max_exceptions + 1), Cells(row1, 18 + max_exceptions + 1)).Select
+    Selection.Cut
+Range(Cells(14, 16), Cells(row1, 16)).Select
+    Selection.Insert Shift:=xlToRight
+
+For i = 15 To row1
+Cells(i, 17).Select
+If WorksheetFunction.IsNA(Cells(i, 17)) Then
+ActiveCell.Value = ""
+End If
+Next i
+
+For i = 15 To row1
+Cells(i, 18).Select
+If WorksheetFunction.IsNA(Cells(i, 18)) Then
+ActiveCell.Value = ""
+End If
+Next i
+
+Range("S14").Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Copy
+Range(Cells(14, 16), Cells(row1, 16)).Select
+Selection.PasteSpecial Paste:=xlPasteFormats, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+Range(Cells(14, 21), Cells(row1, 18 + max_exceptions + 1)).Select
+Selection.PasteSpecial Paste:=xlPasteFormats, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+    Application.CutCopyMode = False
+Range("B14").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.AutoFilter
+Selection.Columns.AutoFit
+Range("D10").Select
+
+'''''''''''''''''
+
+Workbooks("individual Group results.xls").Activate
+Sheets("consolidated_part2_1").Select
+
+Range("A1").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+
+Selection.Copy
+
+Workbooks("Final deliverable.xlsb").Activate
+Sheets("Selected Samples - Final report").Select
+Range("B14").Select
+Workbooks("individual Group results.xls").Activate
+Selection.Copy
+Workbooks("Final deliverable.xlsb").Activate
+ActiveSheet.Paste
+Application.CutCopyMode = False
+Selection.Columns.AutoFit
+
+    With Selection.Interior
+        .Pattern = xlNone
+        .TintAndShade = 0
+        .PatternTintAndShade = 0
+    End With
+    Selection.Borders(xlDiagonalDown).LineStyle = xlNone
+    Selection.Borders(xlDiagonalUp).LineStyle = xlNone
+    With Selection.Borders(xlEdgeLeft)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlEdgeTop)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlEdgeBottom)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlEdgeRight)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlInsideVertical)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    With Selection.Borders(xlInsideHorizontal)
+        .LineStyle = xlContinuous
+        .ColorIndex = 0
+        .TintAndShade = 0
+        .Weight = xlThin
+    End With
+    Range("B14").Select
+    Range(Selection, Selection.End(xlToRight)).Select
+    With Selection.Font
+        .Name = "Calibri"
+        .Size = 11
+        .Strikethrough = False
+        .Superscript = False
+        .Subscript = False
+        .OutlineFont = False
+        .Shadow = False
+        .Underline = xlUnderlineStyleNone
+        .TintAndShade = 0
+        .ThemeFont = xlThemeFontMinor
+    End With
+    With Selection.Interior
+        .Pattern = xlSolid
+        .PatternColorIndex = xlAutomatic
+        .ThemeColor = xlThemeColorLight2
+        .TintAndShade = -0.499984740745262
+        .PatternTintAndShade = 0
+    End With
+    With Selection.Font
+        .ThemeColor = xlThemeColorDark1
+        .TintAndShade = 0
+        .Bold = True
+    End With
+    Range("B14").Select
+
+Range("S15").Select
+ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-17],'Eligible Population'!R15C2:R1448C19,18,0)"
+Selection.Copy
+Range("R15").End(xlDown).Offset(0, 1).Select
+Range(Selection, Selection.End(xlUp)).Select
+ActiveSheet.Paste
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+Range("S14").Value = "Primary Criteria (group name)"
+Range("S:S").Select
+    Selection.TextToColumns Destination:=Cells(1, 19), DataType:=xlDelimited, _
+        TextQualifier:=xlDoubleQuote, ConsecutiveDelimiter:=False, Tab:=False, _
+        Semicolon:=True, Comma:=False, Space:=False, Other:=False, FieldInfo _
+        :=Array(1, 1), TrailingMinusNumbers:=True
+    Range(Cells(1, 19), Cells(1, 18 + max_exceptions)).EntireColumn.Select
+       
+        Selection.Replace What:="G01", Replacement:="abc1", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+        
+        Selection.Replace What:="G02", Replacement:="abc2", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+        
+        Selection.Replace What:="G03", Replacement:="abc3", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+        
+        Selection.Replace What:="G04", Replacement:="abc4", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    
+        Selection.Replace What:="G05", Replacement:="abc5", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    
+        Selection.Replace What:="G06", Replacement:="abc6", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    
+    Selection.Replace What:="G07", Replacement:="abc7", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    
+    Selection.Replace What:="G08", Replacement:="abc8", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G09", Replacement:="abc9", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G10", Replacement:="abc10", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G11", Replacement:="abc11", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G12", Replacement:="abc12", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G13", Replacement:="abc13", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G14", Replacement:="abc14", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G15", Replacement:="abc15", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G16", Replacement:="qbc16", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G17", Replacement:="abc17", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G18", Replacement:="abc18", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+
+    Selection.Replace What:="G19", Replacement:="abc19", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+Sheets("Eligible Population").Select
+Range(Cells(14, 21), Cells(14, 19 + max_exceptions)).Select
+Selection.Copy
+Sheets("Selected Samples - Final report").Select
+Range("T14").Select
+ActiveSheet.Paste
+
+
+Cells(14, 18 + max_exceptions + 1).Value = "Other inspections / reviews"
+Cells(15, 18 + max_exceptions + 1).Select
+ActiveCell.FormulaR1C1 = "=vlookup(RC[-" & max_exceptions + 4 & "],Validation!R1C12:R60000C16,5,0)"
+Selection.Copy
+row1 = ActiveCell.Offset(0, -5).End(xlDown).Row
+Range(Cells(15, 18 + max_exceptions + 1), Cells(row1, 18 + max_exceptions + 1)).Select
+ActiveSheet.Paste
+Selection.Copy
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+Application.CutCopyMode = False
+Range(Cells(14, 18), Cells(14, 18).End(xlDown)).Select
+Selection.Copy
+Range(Cells(14, 19), Cells(14, 18 + max_exceptions + 1).End(xlDown)).Select
+Selection.PasteSpecial Paste:=xlPasteFormats, Operation:=xlNone, _
+        SkipBlanks:=False, Transpose:=False
+Application.CutCopyMode = False
+
+For i = 15 To row1
+Cells(i, 18 + max_exceptions + 1).Select
+If WorksheetFunction.IsNA(Cells(i, 18 + max_exceptions + 1)) Then
+ActiveCell.Value = ""
+End If
+Next i
+
+Range(Cells(14, 18 + max_exceptions + 1), Cells(row1, 18 + max_exceptions + 1)).Select
+    Selection.Cut
+Range(Cells(14, 16), Cells(row1, 16)).Select
+    Selection.Insert Shift:=xlToRight
+
+For i = 15 To row1
+Cells(i, 17).Select
+If WorksheetFunction.IsNA(Cells(i, 17)) Then
+ActiveCell.Value = ""
+End If
+Next i
+
+For i = 15 To row1
+Cells(i, 18).Select
+If WorksheetFunction.IsNA(Cells(i, 18)) Then
+ActiveCell.Value = ""
+End If
+Next i
+
+Range("B14").Select
+Range(Selection, Selection.End(xlToRight)).Select
+Range(Selection, Selection.End(xlDown)).Select
+Selection.Columns.AutoFit
+Selection.AutoFilter
+
+Range("D10").Select
+
+Sheets("Eligible Population").Select
+
+Range("D10").Select
+
+''''''''''''''''''''''''''
+
+
+Dim eligible(19) As Integer
+
+Workbooks("individual Group results.xls").Activate
+
+For i = 1 To 19
+Sheets("Group " & i).Select
+eligible(i) = Range("A10000").End(xlUp).Row - 1
+Next i
+
+Workbooks("Final deliverable.xlsb").Activate
+
+Sheets("Summary").Select
+
+For i = 1 To 19
+Range("I" & i + 6).Value = eligible(i)
+Next i
+
+'''''''base population
+Range("H7").Value = base_pop_grp1
+Range("H8").Value = base_pop_grp2
+
+Range("H9").Value = base_pop1
+Range("H10").Value = base_pop1
+Range("H11").Value = base_pop_grp5
+
+Range("H12").Value = base_pop1
+Range("H13").Value = base_pop1
+Range("H14").Value = base_pop1
+
+Range("H15").Value = base_pop_grp9
+Range("H16").Value = base_pop_grp9
+
+Range("H17").Value = base_pop1
+Range("H18").Value = base_pop1
+Range("H19").Value = base_pop_grp13
+Range("H20").Value = base_pop_grp14
+Range("H21").Value = base_pop_grp15
+Range("H22").Value = base_pop1
+Range("H23").Value = base_pop1
+Range("H24").Value = base_pop_grp18
+Range("H25").Value = base_pop1
+
+'''''''selected
+For i = 1 To 19
+Range("K" & i + 6).Value = selected(i)
+Next i
+
+Dim timestamp As String
+timestamp = Format(Now, "yyyy-MM-dd hh-mm-ss")
+
+Application.DisplayAlerts = False
+ActiveWorkbook.SaveAs path & "\Output\Final deliverable " & timestamp & ".xlsb"
+Application.DisplayAlerts = True
+Sheets("Validation").Visible = False
+Workbooks("Final deliverable " & timestamp & ".xlsb").Close savechanges:=True
+Workbooks("individual Group results.xls").Close savechanges:=True
+
+End Sub
+
+
