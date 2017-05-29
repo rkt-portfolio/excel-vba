@@ -1,0 +1,2 @@
+'code to find the last row of a table
+LAST_ROW = Range("A" & Rows.Count).End(xlUp).Row
