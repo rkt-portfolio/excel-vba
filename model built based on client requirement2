@@ -1,0 +1,475 @@
+Attribute VB_Name = "Module2"
+''' defined ratios action
+
+Sub Button3_click()
+Application.DisplayAlerts = False
+Application.ScreenUpdating = False
+
+Dim Ratio As String
+Dim f_path As String
+Dim Scle As String
+Dim flag As String
+Dim Max_Period As Integer
+f_path = Application.ActiveWorkbook.Path
+
+Ratio = Range("Select_Ratio").Value
+flag = "Defined Ratio"
+If Ratio = "Select a Ratio" Then
+MsgBox "Please select a ratio!"
+GoTo Eop:
+End If
+
+a = SheetExists(Ratio)
+
+If a = "True" Then
+Sheets(Ratio).Activate
+GoTo Eop:
+End If
+
+
+Workbooks.Open (f_path & "\Intermediate Ref Data - Working.xlsx")
+Sheets("Data").Activate
+
+Max_Period = Macro2()
+
+Call Nr_Dr_Tab_Prep(Ratio, Max_Period, flag)
+
+Call FTable_single_nr_dr(Max_Period, Ratio)
+
+Scle = FChart(Max_Period)
+
+Call AddChartSheet(Ratio)
+
+Call AddChartSheet_1(Scle)
+
+Workbooks("Intermediate Ref Data - Working.xlsx").Close SaveChanges:=False
+
+
+ActiveWindow.Zoom = 80
+'''
+    Range("D20").Select
+    Selection.Cut
+    Range("E20").Select
+    ActiveSheet.Paste
+    Columns("D:D").Select
+    Range("D20").Activate
+    Selection.Columns.AutoFit
+    Range("E20").Select
+    Selection.Cut
+    Range("D20").Select
+    ActiveSheet.Paste
+'''
+Range("A1").Select
+
+Eop:
+
+Sheets("RatioSummary").Visible = False
+    
+Application.DisplayAlerts = True
+Application.ScreenUpdating = True
+
+End Sub
+
+Function Macro2() As Integer
+    Dim Max_Period As Integer
+    Dim i As Integer
+    Dim j As String
+    Workbooks("Intermediate Ref Data - Working.xlsx").Activate
+    
+    Sheets("Data").Select
+    Range("A1").Select
+    ActiveCell.Offset(1, 4).Select
+    ActiveCell.FormulaR1C1 = "=1*RC[-2]"
+    Range("B2").Select
+    Selection.End(xlDown).Select
+    ActiveCell.Offset(, 3).Select
+    Range(Selection, Selection.End(xlUp)).Select
+    Selection.FillDown
+    Selection.End(xlUp).Select
+    ActiveCell.Offset(, 1).Select
+    ActiveCell.FormulaR1C1 = "=MAX(R1C[-1]:R103456C[-1])"
+    Max_Period = ActiveCell.Value
+    'Columns("E:F").Delete
+    Sheets.Add After:=Sheets(Sheets.Count)
+    ActiveSheet.Name = "Modified"
+    Sheets("Data").Select
+    Range("B:B").Select
+    Selection.Copy
+    Sheets("Modified").Select
+    ActiveSheet.Paste
+    ActiveSheet.Range("$A$1:$A$100000").RemoveDuplicates Columns:=Array(1), Header:=xlNo
+    
+    For i = 1 To Max_Period
+    ActiveCell.Offset(, 1).Select
+    ActiveCell.FormulaR1C1 = "Period " & i
+    Next i
+    Range("A1").Select
+    Sheets("Data").Select
+    Columns("D:D").Select
+    Selection.Insert shift:=xlToRight
+    Range("D2").Select
+    ActiveCell.FormulaR1C1 = "=RC[-2]&RC[2]"
+    Range("B2").Select
+    Selection.End(xlDown).Select
+    ActiveCell.Offset(, 2).Select
+    Range(Selection, Selection.End(xlUp)).Select
+    Selection.FillDown
+    Sheets("Modified").Select
+    Range("A2").Select
+    ''''
+    Cells(2, 1).Select
+    For b = 1 To Max_Period
+    ActiveCell.Offset(, 1).Select
+    
+    ActiveCell.FormulaR1C1 = "=VLOOKUP(RC[-" & b & "]" & "& """ & b & """" & ",Data!R2C4:R201C5,2,0)"
+    Next b
+    ''''
+    Range("A1").Select
+    Selection.End(xlDown).Select
+    ActiveCell.Offset(, 1).Select
+    Range(Selection, ActiveCell.Offset(, Max_Period - 1)).Select
+    Range(Selection, Selection.End(xlUp)).Select
+    Selection.FillDown
+    Columns("B:N").Select
+    Selection.Copy
+    Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+    Selection.Replace What:="#N/A", Replacement:="0", LookAt:=xlPart, _
+        SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, _
+        ReplaceFormat:=False
+    Application.CutCopyMode = False
+    Selection.NumberFormat = "0.00"
+    Range("A1").Select
+    Macro2 = Max_Period
+End Function
+
+
+
+Function FChart(Max_Period As Integer)
+Dim Factor As Double
+Dim Unit As Double
+Dim Scle As String
+
+Range("XEB22").Select
+ActiveCell.FormulaR1C1 = "=abs(r[-2]C)"
+Selection.Copy
+Range(Selection, ActiveCell.Offset(1, Max_Period - 1)).Select
+ActiveSheet.Paste
+
+Range("XEB24").Select
+ActiveCell.FormulaR1C1 = "=MIN(R[-2]C:R[-1]C[" & Max_Period & "])"
+
+Range("XEB24").Select
+Unit = Range("XEB24").Value
+If Unit / 1000000000000# > 1 Then
+Scle = "Trillions"
+Factor = 1000000000000#
+GoTo TablPrep:
+ElseIf Unit / 1000000000 > 1 Then
+Scle = "Billions"
+Factor = 1000000000
+GoTo TablPrep:
+ElseIf Unit / 1000000 > 1 Then
+Scle = "Millions"
+Factor = 1000000
+GoTo TablPrep:
+ElseIf Unit / 1000 > 1 Then
+Scle = "Thousands"
+Factor = 1000
+GoTo TablPrep:
+ElseIf Unit / 100 > 1 Then
+Scle = "Hundreds"
+Factor = 100
+GoTo TablPrep:
+ElseIf Unit < 100 Then
+Scle = " "
+Factor = 1
+GoTo TablPrep:
+End If
+
+TablPrep:
+Range("XEB22").Select
+ActiveCell.FormulaR1C1 = "=r[-2]c / " & Factor
+Selection.Copy
+Selection.End(xlUp).Select
+Selection.End(xlToRight).Select
+ActiveCell.Offset(6).Select
+Range(Selection, "XEB22").Select
+ActiveSheet.Paste
+Selection.Copy
+Range("XEB20").Select
+Selection.PasteSpecial Paste:=xlPasteValues, Operation:=xlNone, SkipBlanks _
+        :=False, Transpose:=False
+Range("XEA22:XFD25").Select
+Selection.ClearContents
+FChart = Scle
+End Function
+
+Sub AddChartSheet(Ratio As String)
+Dim RatioChrtArea As Range
+
+Range("XEA17").Select
+Selection.End(xlToRight).Select
+Selection.End(xlToRight).Select
+ActiveCell.Offset(1).Select
+Range(Selection, "XEA17").Select
+With ActiveSheet.ChartObjects.Add _
+        (Left:=100, Width:=375, Top:=75, Height:=225)
+    With .Chart
+        .ChartType = xlLine
+        .SetSourceData Source:=Range("$XEA$17:$XEG$18")
+        .Parent.Name = "Ratio Trend"
+         .Axes(xlCategory, xlPrimary).HasTitle = True
+      .Axes(xlCategory, xlPrimary).AxisTitle.Characters.Text = "Period"
+      .Axes(xlValue, xlPrimary).HasTitle = True
+      .Axes(xlValue, xlPrimary).AxisTitle.Characters.Text = "Ratio"
+    End With
+End With
+    'ActiveChart.Parent.Cut
+    Application.CutCopyMode = False
+    ActiveSheet.Shapes("Ratio Trend").Cut
+    Range("A1").Select
+    ActiveSheet.Paste
+    ActiveSheet.Shapes("Ratio Trend").Select
+
+    'ActiveSheet.ChartObjects("Ratio Trend").Activate
+    ActiveChart.ClearToMatchStyle
+    ActiveChart.ChartStyle = 48
+    ActiveChart.ChartType = xlLineMarkers
+    ActiveChart.Legend.Select
+    Selection.Delete
+    ActiveSheet.ChartObjects("Ratio Trend").Activate
+    ActiveSheet.Shapes("Ratio Trend").IncrementLeft 16.5
+    ActiveSheet.Shapes("Ratio Trend").IncrementTop 11.25
+    ActiveSheet.ChartObjects("Ratio Trend").Activate
+    ActiveSheet.Shapes("Ratio Trend").Width = 432
+    ActiveChart.Parent.RoundedCorners = True
+    With ActiveSheet.Shapes("Ratio Trend").Line
+        .Visible = msoTrue
+        .Weight = 2.25
+    End With
+    ActiveSheet.ChartObjects("Ratio Trend").Activate
+    ActiveChart.SeriesCollection(1).Select
+    With Selection.Format.Line
+        .Visible = msoTrue
+        .Weight = 2.5
+    End With
+    ActiveSheet.ChartObjects("Ratio Trend").Activate
+    Selection.Placement = xlFreeFloating
+End Sub
+
+
+Sub AddChartSheet_1(Scle As String)
+Dim RatioChrtArea As Range
+
+Range("XEA19").Select
+Selection.End(xlToRight).Select
+Selection.End(xlToRight).Select
+ActiveCell.Offset(2).Select
+Range(Selection, "XEA19").Select
+With ActiveSheet.ChartObjects.Add _
+        (Left:=100, Width:=375, Top:=75, Height:=225)
+    With .Chart
+        .ChartType = xlLine
+         .HasTitle = True
+    .ChartTitle.Text = "Nr Vs Dr"
+        .SetSourceData Source:=Range("$XEA$19:$XEG$21")
+        .Parent.Name = "Nr Vs Dr"
+         .Axes(xlCategory, xlPrimary).HasTitle = True
+      .Axes(xlCategory, xlPrimary).AxisTitle.Characters.Text = "Period"
+      .Axes(xlValue, xlPrimary).HasTitle = True
+      .Axes(xlValue, xlPrimary).AxisTitle.Characters.Text = Scle
+    End With
+End With
+    Application.CutCopyMode = False
+    ActiveSheet.Shapes("Nr Vs Dr").Cut
+    Range("A1").Select
+    ActiveSheet.Paste
+    ActiveSheet.Shapes("Nr Vs Dr").Select
+    ActiveChart.ClearToMatchStyle
+    ActiveChart.ChartStyle = 42
+    ActiveChart.ChartType = xlLineMarkers
+    ActiveChart.Legend.Select
+    'Selection.Delete
+    ActiveSheet.ChartObjects("Nr Vs Dr").Activate
+    ActiveSheet.Shapes("Nr Vs Dr").Width = 432
+    ActiveChart.Parent.RoundedCorners = True
+    With ActiveSheet.Shapes("Nr Vs Dr").Line
+        .Visible = msoTrue
+        .Weight = 2.25
+    End With
+    ActiveSheet.ChartObjects("Nr Vs Dr").Activate
+    ActiveChart.SeriesCollection(1).Select
+    With Selection.Format.Line
+        .Visible = msoTrue
+        .Weight = 2.5
+    End With
+     ActiveChart.Axes(xlValue).Select
+    Selection.TickLabels.NumberFormat = _
+        "_($* #,##0_);_($* (#,##0);_($* ""-""_);_(@_)"
+    ActiveChart.SeriesCollection(1).Select
+    ActiveChart.SeriesCollection(2).Select
+    With Selection.Format.Line
+        .Visible = msoTrue
+        .Weight = 2.5
+    End With
+    ActiveChart.SeriesCollection(2).Select
+    With Selection
+        .MarkerStyle = 1
+        .MarkerSize = 9
+    End With
+    Selection.MarkerSize = 7
+    ActiveChart.ChartArea.Select
+    ActiveSheet.ChartObjects("Nr Vs Dr").Activate
+    ActiveChart.ChartTitle.Select
+    Selection.Delete
+    ActiveChart.Legend.Select
+    Selection.Position = xlTop
+    Selection.Width = 186
+    Selection.Height = 30
+    
+    ActiveSheet.Shapes("Nr Vs Dr").IncrementLeft 590
+    ActiveSheet.Shapes("Nr Vs Dr").IncrementTop 11.25
+    ActiveSheet.ChartObjects("Nr Vs Dr").Activate
+    Selection.Placement = xlFreeFloating
+    Range("F5").Select
+    
+'''''' Addin a Hyperlink
+ActiveSheet.Shapes.AddShape(msoShapeRoundedRectangle, 996.8750393701, 166.25, _
+        92.5, 30).Select
+    Selection.ShapeRange.ShapeStyle = msoShapeStylePreset38
+    With Selection.ShapeRange.ThreeD
+        .BevelTopType = msoBevelCircle
+        .BevelTopInset = 6
+        .BevelTopDepth = 6
+    End With
+    Selection.ShapeRange(1).TextFrame2.TextRange.Characters.Text = _
+        "Compute another ratio"
+    With Selection.ShapeRange(1).TextFrame2.TextRange.Characters(1, 21). _
+        ParagraphFormat
+        .FirstLineIndent = 0
+        .Alignment = msoAlignLeft
+    End With
+    With Selection.ShapeRange(1).TextFrame2.TextRange.Characters(1, 21).Font
+        .Bold = msoTrue
+        .NameComplexScript = "+mn-cs"
+        .NameFarEast = "+mn-ea"
+        .Fill.Visible = msoTrue
+        .Fill.ForeColor.ObjectThemeColor = msoThemeColorLight1
+        .Fill.ForeColor.TintAndShade = 0
+        .Fill.ForeColor.Brightness = 0
+        .Fill.Transparency = 0
+        .Fill.Solid
+        .Size = 12
+        .Name = "+mn-lt"
+    End With
+    Selection.Cut
+    ActiveWindow.ScrollColumn = 1
+    Range("A1").Select
+    ActiveSheet.Paste
+    Selection.ShapeRange.IncrementLeft 465
+    Selection.ShapeRange.IncrementTop 30
+    Selection.ShapeRange.ScaleWidth 1, msoFalse, msoScaleFromTopLeft
+    Selection.ShapeRange.ScaleHeight 1.5, msoFalse, msoScaleFromTopLeft
+   
+    Selection.ShapeRange.TextFrame2.VerticalAnchor = msoAnchorMiddle
+    Selection.ShapeRange.TextFrame2.TextRange.ParagraphFormat.Alignment = _
+        msoAlignCenter
+    Selection.Placement = xlFreeFloating
+    Selection.OnAction = "Back_to_Interface"
+    'ActiveSheet.Hyperlinks.Add Anchor:=Selection.ShapeRange.Item(1), Address:="", SubAddress:="'Interface'" & "!A1"
+    
+    '''''Adding Compare Ratio Button
+    
+    ActiveSheet.Shapes.AddShape(msoShapeRoundedRectangle, 996.8750393701, 166.25, _
+        92.5, 30).Select
+    Selection.ShapeRange.ShapeStyle = msoShapeStylePreset38
+    With Selection.ShapeRange.ThreeD
+        .BevelTopType = msoBevelCircle
+        .BevelTopInset = 6
+        .BevelTopDepth = 6
+    End With
+    Selection.ShapeRange(1).TextFrame2.TextRange.Characters.Text = _
+        "Compare with another Ratio"
+    With Selection.ShapeRange(1).TextFrame2.TextRange.Characters(1, 26). _
+        ParagraphFormat
+        .FirstLineIndent = 0
+        .Alignment = msoAlignLeft
+    End With
+    With Selection.ShapeRange(1).TextFrame2.TextRange.Characters(1, 26).Font
+        .Bold = msoTrue
+        .NameComplexScript = "+mn-cs"
+        .NameFarEast = "+mn-ea"
+        .Fill.Visible = msoTrue
+        .Fill.ForeColor.ObjectThemeColor = msoThemeColorLight1
+        .Fill.ForeColor.TintAndShade = 0
+        .Fill.ForeColor.Brightness = 0
+        .Fill.Transparency = 0
+        .Fill.Solid
+        .Size = 12
+        .Name = "+mn-lt"
+    End With
+    Selection.Cut
+    ActiveWindow.ScrollColumn = 1
+    Range("A1").Select
+    ActiveSheet.Paste
+    Selection.ShapeRange.IncrementLeft 465
+    Selection.ShapeRange.IncrementTop 95
+    Selection.ShapeRange.ScaleWidth 1, msoFalse, msoScaleFromTopLeft
+    Selection.ShapeRange.ScaleHeight 1.5, msoFalse, msoScaleFromTopLeft
+    Selection.ShapeRange.TextFrame2.VerticalAnchor = msoAnchorMiddle
+    Selection.ShapeRange.TextFrame2.TextRange.ParagraphFormat.Alignment = _
+        msoAlignCenter
+    Selection.Placement = xlFreeFloating
+    Selection.OnAction = "Compare_ratio"
+    
+    '''''
+    'Adding remove comparison button
+
+    ActiveSheet.Shapes.AddShape(msoShapeRoundedRectangle, 996.8750393701, 166.25, _
+        92.5, 30).Select
+    Selection.ShapeRange.ShapeStyle = msoShapeStylePreset38
+    With Selection.ShapeRange.ThreeD
+        .BevelTopType = msoBevelCircle
+        .BevelTopInset = 6
+        .BevelTopDepth = 6
+    End With
+    Selection.ShapeRange(1).TextFrame2.TextRange.Characters.Text = _
+        "Remove Comparison"
+    With Selection.ShapeRange(1).TextFrame2.TextRange.Characters(1, 17). _
+        ParagraphFormat
+        .FirstLineIndent = 0
+        .Alignment = msoAlignLeft
+    End With
+    With Selection.ShapeRange(1).TextFrame2.TextRange.Characters(1, 17).Font
+        .Bold = msoTrue
+        .NameComplexScript = "+mn-cs"
+        .NameFarEast = "+mn-ea"
+        .Fill.Visible = msoTrue
+        .Fill.ForeColor.ObjectThemeColor = msoThemeColorLight1
+        .Fill.ForeColor.TintAndShade = 0
+        .Fill.ForeColor.Brightness = 0
+        .Fill.Transparency = 0
+        .Fill.Solid
+        .Size = 12
+        .Name = "+mn-lt"
+    End With
+    Selection.Cut
+    ActiveWindow.ScrollColumn = 1
+    Range("A1").Select
+    ActiveSheet.Paste
+    Selection.ShapeRange.IncrementLeft 465
+    Selection.ShapeRange.IncrementTop 160
+    Selection.ShapeRange.ScaleWidth 1, msoFalse, msoScaleFromTopLeft
+    Selection.ShapeRange.ScaleHeight 1.5, msoFalse, msoScaleFromTopLeft
+    Selection.ShapeRange.TextFrame2.VerticalAnchor = msoAnchorMiddle
+    Selection.ShapeRange.TextFrame2.TextRange.ParagraphFormat.Alignment = _
+        msoAlignCenter
+    Selection.Placement = xlFreeFloating
+    Selection.OnAction = "Remove_Comparison"
+    
+
+End Sub
+
+
+
