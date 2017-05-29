@@ -1,0 +1,5 @@
+Private Declare Function LockWorkStation Lib "user32.dll" () As Long 
+ 
+Private Sub LockStation() 
+    LockWorkStation 
+End Sub 
