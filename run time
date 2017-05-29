@@ -1,0 +1,44 @@
+Sub CalculateRunTime_Seconds()
+'PURPOSE: Determine how many seconds it took for code to completely run
+
+Dim StartTime As Double
+Dim SecondsElapsed As Double
+
+'Remember time when macro starts
+  StartTime = Timer
+
+'*****************************
+'Insert Your Code Here...
+'*****************************
+
+'Determine how many seconds code took to run
+  SecondsElapsed = Round(Timer - StartTime, 2)
+
+'Notify user in seconds
+  MsgBox "This code ran successfully in " & SecondsElapsed & " seconds", vbInformation
+
+End Sub
+
+
+-------------------------------------------------------------------------------------------------------------------
+
+Sub CalculateRunTime_Minutes()
+'PURPOSE: Determine how many minutes it took for code to completely run
+
+Dim StartTime As Double
+Dim MinutesElapsed As String
+
+'Remember time when macro starts
+  StartTime = Timer
+
+'*****************************
+'Insert Your Code Here...
+'*****************************
+
+'Determine how many seconds code took to run
+  MinutesElapsed = Format((Timer - StartTime) / 86400, "hh:mm:ss")
+
+'Notify user in seconds
+  MsgBox "This code ran successfully in " & MinutesElapsed & " minutes", vbInformation
+
+End Sub
