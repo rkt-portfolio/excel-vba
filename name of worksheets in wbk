@@ -1,0 +1,21 @@
+Sub CombineSheets()
+   Dim ws As Worksheet, wsCombine As Worksheet
+   Dim rg As Range
+   Dim RowCombine As Integer
+
+   Set wsCombine = ThisWorkbook.Worksheets.Add(ThisWorkbook.Worksheets(1))
+   wsCombine.Name = "Combine"
+
+   RowCombine = 1
+   For Each ws In ThisWorkbook.Worksheets
+      If ws.Index <> 1 Then
+         Set rg = ws.Cells(1, 1).CurrentRegion
+         rg.Copy wsCombine.Cells(RowCombine, 2)
+         wsCombine.Range(Cells(RowCombine, 1), Cells(RowCombine + rg.Rows.Count - 1, 1)) = ws.Name
+         RowCombine = RowCombine + rg.Rows.Count
+      End If
+   Next
+   wsCombine.Cells(1, 1).EntireColumn.AutoFit
+   Set rg = Nothing
+   Set wsCombine = Nothing
+End Sub
