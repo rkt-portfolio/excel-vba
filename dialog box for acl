@@ -1,0 +1,16 @@
+COM **** CODE TO GENERATE A REPORT FOR UIT-WORKPAPER MODULE ****
+
+CLOSE PRI SEC
+
+SET SAFETY OFF
+SET SUPPRESSXML ON
+SET EXACT ON
+
+COM **** UPDATE THE PATH AND FILENAME BELOW ****
+
+DIALOG (DIALOG TITLE "Inputs to run the tool" WIDTH 500 HEIGHT 300 ) (BUTTONSET TITLE "&OK;&Cancel" AT 400 75 DEFAULT 1 ) (TEXT TITLE "Please update the boxes with inputs to run the tool. " AT 12 25 HEIGHT 20 ) (TEXT TITLE "Location of this tool:" AT 24 50 ) (EDIT TO "V_PATH" AT 36 75  WIDTH 300 DEFAULT "" ) (TEXT TITLE "Audit Report file name:" AT 24 125 ) (EDIT TO "V_FILE1" AT 36 150 WIDTH 300 DEFAULT "" ) (TEXT TITLE "Dividend Audit Report file name:" AT 24 200 ) (EDIT TO "V_FILE2" AT 36 225  WIDTH 300 DEFAULT "" ) 
+
+
+DIALOG (DIALOG TITLE "Inputs to run the tool" WIDTH 300 HEIGHT 100 ) (BUTTONSET TITLE "&OK" AT 100 50 DEFAULT 1 ) (TEXT TITLE "Final report is saved in output folder!" AT 65 25 HEIGHT 20 ) 
+
+COM **** END OF CODE ****
