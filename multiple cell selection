@@ -1,0 +1,1 @@
+Union(Cells(35, col1), Cells(35, col2), Cells(72, col2)).Value = qtd_value(ee, qr, 1)
