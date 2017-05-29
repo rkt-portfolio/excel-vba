@@ -1,0 +1,67 @@
+'ACL call procedure using vba
+
+Dim TEMPLATE_NAME As String
+
+'This Sub Function will trigger the application
+Public Sub PerformAnalysis_Click()
+
+    
+    Dim SoftwarePath As String
+    Dim ProjectPath As String
+    Dim ProjectName As String
+
+    ' Capture Software & Project details
+    
+    SoftwarePath = Sheets("Dashboard").Cells(6, 4).Value
+    
+    ProjectPath = Sheets("Dashboard").Cells(7, 4).Value
+    
+    ProjectName = Sheets("Dashboard").Cells(8, 4).Value
+    
+    Call execute_ACL(SoftwarePath, ProjectPath, ProjectName)
+
+    Set fso = CreateObject("Scripting.FileSystemObject")
+
+    Application.Wait (Now + TimeValue("0:00:1"))
+    
+'    Dim TempFilesPath As String
+'    TempFilesPath = ProjectPath
+'    
+'    If Recalc = True Or Recon = True Then
+'        While (True)
+'            totalpath = fso.BuildPath(TempFilesPath & "\TempFiles\", "1_ProductDetails.del")
+'            If fso.FileExists(totalpath) Then GoTo EndACL
+'        Wend
+'    End If
+    
+'EndACL:
+    
+    MsgBox "Code complete."
+
+End Sub
+
+'actual sub function to trigger the ACL function
+Private Sub execute_ACL(Prog_path As String, Proj_path As String, File_path As String)
+On Error GoTo error1
+
+    Dim dbACLProcessID As Long
+    
+    ' Comment : path of the executable (full path with full name)
+    cACLProgram = Prog_path & "\ACLWin.exe  "
+    ' Comment : path of the project
+    strACLFile = Proj_path & "\" & File_path
+    ' Comment : Project Root Folder
+    MAINPATH = " /vMAINPATH=""" & Proj_path & """"
+    
+    
+        Start = " /bC_Readin"
+
+    
+    ' Comment : invoking the executable; also passing appropriate parameters
+    dbACLProcessID = Shell(cACLProgram & strACLFile & MAINPATH & SDATE & EDate & SFDATE & EFDATE & MoneyCardFees & Start)
+    
+    GoTo normalend
+error1:
+    MsgBox "Another instance of ACL is open , please close the instance and try again"
+normalend:
+End Sub
