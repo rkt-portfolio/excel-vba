@@ -1,0 +1,204 @@
+Dim TEMPLATE_NAME As String
+
+'This Sub Function will trigger the application
+Public Sub PerformAnalysis_Click()
+
+    TEMPLATE_NAME = "GDC WalMart Fee Checker Tool Template.xls"
+    
+    Dim TempVar As Variant
+    
+    Dim SoftwarePath As String
+    Dim ProjectPath As String
+    Dim ProjectName As String
+
+    Dim S_Date As String
+    Dim E_Date As String
+    
+    Dim S_FDate As String
+    Dim E_FDate As String
+    
+    Dim Recalc As String
+    Dim Recon As String
+    
+    ' Walmart Fees
+    Dim WF01 As String
+    Dim WF02 As String
+    Dim WF03 As String
+    Dim WF04 As String
+    Dim WF05 As String
+    Dim WF06 As String
+    Dim WF07 As String
+    Dim WF08 As String
+    Dim WF09 As String
+    Dim WF10 As String
+    Dim WF11 As String
+    Dim WF12 As String
+    Dim WF13 As String
+    Dim WF14 As String
+    Dim WF15 As String
+    Dim WF16 As String
+    Dim WF17 As String
+    Dim WF18 As String
+    Dim WF19 As String
+    Dim WF20 As String
+    Dim WF21 As String
+    Dim WF22 As String
+    
+    Dim MoneyCardFees As Variant
+    
+    ' Capture Software & Project details
+    Range("ASP").Select
+    SoftwarePath = ActiveCell.Value
+    Range("APP").Select
+    ProjectPath = ActiveCell.Value
+    Range("APN").Select
+    ProjectName = ActiveCell.Value
+    
+    ' Start Date
+    Range("SDate").Select
+    S_Date = ActiveCell.Value & ""
+    ' End Date
+    Range("EDate").Select
+    E_Date = ActiveCell.Value & ""
+    
+    
+    ' Start Fund Date
+    Range("SFundDate").Select
+    S_FDate = ActiveCell.Value & ""
+    ' End Fund Date
+    Range("EFundDate").Select
+    E_FDate = ActiveCell.Value & ""
+    
+    
+    Recalc = Recalculation
+    Recon = Reconciliation
+    
+     ' Holiday Parameters
+    Walmart_Details
+    
+    WF01 = ActiveSheet.Range("MC_RushDel").Value & ""
+    WF02 = ActiveSheet.Range("MC_StanCard").Value & ""
+    WF03 = ActiveSheet.Range("MC_StuCard").Value & ""
+    WF04 = ActiveSheet.Range("MC_MoneyPak").Value & ""
+    WF05 = ActiveSheet.Range("MC_SwipeWM").Value & ""
+    WF06 = ActiveSheet.Range("MC_SwipeNonWM").Value & ""
+    WF07 = ActiveSheet.Range("MC_2ndCard").Value & ""
+    WF08 = ActiveSheet.Range("MC_MMF").Value & ""
+    WF09 = ActiveSheet.Range("MC_LostStolen").Value & ""
+    WF10 = ActiveSheet.Range("MC_ATMDom").Value & ""
+    WF11 = ActiveSheet.Range("MC_ATMInt").Value & ""
+    WF12 = ActiveSheet.Range("MC_Teller").Value & ""
+    WF13 = ActiveSheet.Range("MC_ATMInq").Value & ""
+    WF14 = ActiveSheet.Range("MC_ForeignTrans").Value & ""
+    
+    WF15 = ActiveSheet.Range("MC_Dorm").Value & ""
+    WF16 = ActiveSheet.Range("MC_NegAmt").Value & ""
+    
+    WF17 = ActiveSheet.Range("GC_50Card").Value & ""
+    WF18 = ActiveSheet.Range("GC_100Card").Value & ""
+    WF19 = ActiveSheet.Range("GC_MMF").Value & ""
+    WF20 = ActiveSheet.Range("GC_PhoneInq").Value & ""
+    WF21 = ActiveSheet.Range("GC_LostStolen").Value & ""
+    WF22 = ActiveSheet.Range("GC_BalanceTrans").Value & ""
+
+    Walmart1_GoBack
+    
+    MC_RushDel1 = " /VWF01=""" & WF01 & """"
+    MC_StanCard1 = " /VWF02=""" & WF02 & """"
+    MC_StuCard1 = " /VWF03=""" & WF03 & """"
+    MC_MoneyPak1 = " /VWF04=""" & WF04 & """"
+    MC_SwipeWM1 = " /VWF05=""" & WF05 & """"
+    MC_SwipeNonWM1 = " /VWF06=""" & WF06 & """"
+    MC_2ndCard1 = " /VWF07=""" & WF07 & """"
+    MC_MMF1 = " /VWF08=""" & WF08 & """"
+    MC_LostStolen1 = " /VWF09=""" & WF09 & """"
+    MC_ATMDom1 = " /VWF10=""" & WF10 & """"
+    MC_ATMInt1 = " /VWF11=""" & WF11 & """"
+    MC_Teller1 = " /VWF12=""" & WF12 & """"
+    MC_ATMInq1 = " /VWF13=""" & WF13 & """"
+    MC_ForeignTrans1 = " /VWF14=""" & WF14 & """"
+    
+    MC_Dorm1 = " /VWF15=""" & WF15 & """"
+    MC_NegAmt1 = " /VWF16=""" & WF16 & """"
+    
+    GC_50Card1 = " /VWF17=""" & WF17 & """"
+    GC_100Card1 = " /VWF18=""" & WF18 & """"
+    GC_MMF1 = " /VWF19=""" & WF19 & """"
+    GC_PhoneInq1 = " /VWF20=""" & WF20 & """"
+    GC_LostStolen1 = " /VWF21=""" & WF21 & """"
+    GC_BalanceTrans1 = " /VWF22=""" & WF22 & """"
+
+    Call Export_Accounts
+    
+    MoneyCardFees = MC_RushDel1 & MC_StanCard1 & MC_StuCard1 & MC_MoneyPak1 & MC_SwipeWM1 & MC_SwipeNonWM1 & MC_2ndCard1 & MC_MMF1 & MC_LostStolen1 & MC_ATMDom1 & MC_ATMInt1 & MC_Teller1 & MC_ATMInq1 & MC_ForeignTrans1 & MC_Dorm1 & MC_NegAmt1 & GC_50Card1 & GC_100Card1 & GC_MMF1 & GC_PhoneInq1 & GC_LostStolen1 & GC_BalanceTrans1
+    
+    Call execute_ACL(SoftwarePath, ProjectPath, ProjectName, S_Date, E_Date, S_FDate, E_FDate, Recalc, Recon, MoneyCardFees)
+
+    Set fso = CreateObject("Scripting.FileSystemObject")
+
+    Application.Wait (Now + TimeValue("0:00:1"))
+    
+    Dim TempFilesPath As String
+    TempFilesPath = ProjectPath
+    
+    If Recalc = True Or Recon = True Then
+        While (True)
+            totalpath = fso.BuildPath(TempFilesPath & "\TempFiles\", "1_ProductDetails.del")
+            If fso.FileExists(totalpath) Then GoTo EndACL
+        Wend
+    End If
+    
+EndACL:
+    
+    MsgBox "Fee Checker Analysis complete."
+
+End Sub
+
+'actual sub function to trigger the ACL function
+Private Sub execute_ACL(Prog_path As String, Proj_path As String, File_path As String, S_Date As String, E_Date As String, S_FDate As String, E_FDate As String, Recalculate As String, Reconciliation As String, MoneyCardFees As Variant)
+On Error GoTo error1
+
+    Dim dbACLProcessID As Long
+    
+    ' Comment : path of the executable (full path with full name)
+    cACLProgram = Prog_path & "\ACLWin.exe  "
+    ' Comment : path of the project
+    strACLFile = Proj_path & "\" & File_path
+    ' Comment : Project Root Folder
+    MAINPATH = " /vMAINPATH=""" & Proj_path & """"
+    ' Comment : Analysis Start Date
+    SDATE = " /vS_DATE=""" & S_Date & """"
+    ' Comment : Analysis End Date
+    EDate = " /vE_DATE=""" & E_Date & """"
+    ' Comment : Analysis Start Fund Date
+    SFDATE = " /vS_FDATE=""" & S_FDate & """"
+    ' Comment : Analysis End Fund Date
+    EFDATE = " /vE_FDATE=""" & E_FDate & """"
+    
+    If Recalculate = True And Reconciliation = True Then
+        'MsgBox "Hi1"
+        ' Comment : Start up script name
+        Start = " /bScript0_RunAll"
+
+    ElseIf Recalculate = True Then
+    'MsgBox "Hi2"
+        Start = " /bScript0_RunRecalc"
+    
+    ElseIf Reconciliation = True Then
+    'MsgBox "Hi3"
+        Start = " /bScript0_RunRecon"
+    
+    Else
+    'MsgBox "Hi4"
+        GoTo normalend
+        
+    End If
+    
+    ' Comment : invoking the executable; also passing appropriate parameters
+    dbACLProcessID = Shell(cACLProgram & strACLFile & MAINPATH & SDATE & EDate & SFDATE & EFDATE & MoneyCardFees & Start)
+    
+    GoTo normalend
+error1:
+    MsgBox "Another instance of ACL is open , please close the instance and try again"
+normalend:
+End Sub
