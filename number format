@@ -1,0 +1,6 @@
+Columns("D:D").NumberFormat = "#,##0"
+Columns("D:D").NumberFormat = "Currency"
+Columns("D:D").NumberFormat = "Accounting"
+
+Range("I:I").NumberFormat = "#,##0"
+Range("J:X").NumberFormat = "#,##0_);[Red](#,##0)"
