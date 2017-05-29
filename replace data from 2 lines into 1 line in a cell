@@ -1,0 +1,2 @@
+'use this code in the sub query
+Cells.Replace What:=vbLf, Replacement:=" ", LookAt:=xlPart
