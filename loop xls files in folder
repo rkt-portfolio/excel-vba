@@ -1,0 +1,20 @@
+myExtension = "*.xls"
+
+Set wb = ActiveWorkbook
+
+'Target Path with Ending Extention
+  myFile = Dir(myPath & "\" & myExtension)
+  
+  'Loop through each Excel file in folder
+  Do While myFile <> ""
+  
+  
+  	'' code here
+      
+  
+  'Get next file name
+  myFile = Dir
+    
+ Loop
+
+  
