@@ -1,0 +1,22 @@
+'remove special characters
+ 
+        Dim sSpecialChars As String
+        Dim i As Long
+        sSpecialChars = "\/:*?""'<>|,.- "
+        
+            last_row1 = Cells(1000000, 2).End(xlUp).Row
+            Set rrng = Range(Cells(2, 2), Cells(last_row1, 2))
+            
+            For Each rcell In rrng
+            
+                sInput = rcell
+                If sInput <> "" Then
+                For i = 1 To Len(sSpecialChars)
+                sInput = Replace$(sInput, Mid$(sSpecialChars, i, 1), "")
+                Next
+                r1 = rcell.Row
+                c1 = rcell.Column
+                Cells(r1, c1 + 1).Value = sInput
+                End If
+            
+            Next
