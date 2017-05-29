@@ -1,0 +1,6 @@
+'include this code in the sub  function
+'update the cell references
+
+ActiveSheet.Range("$A$1:$N$" & last_row1).AutoFilter Field:=14, Criteria1:="TRUE"
+
+Range("$A$1:$A$" & last_row1).SpecialCells(xlCellTypeVisible).COPY
