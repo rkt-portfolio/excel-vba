@@ -1,0 +1,5 @@
+'include this code in the sub function
+With Rng.Validation
+    .Delete 'delete previous validation
+    .Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Formula1:="=ENTRIES"
+End With
