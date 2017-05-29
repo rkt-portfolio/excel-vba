@@ -1,0 +1,46 @@
+Sub doubleline()
+    With Selection.Borders(xlEdgeTop)
+        .LineStyle = xlContinuous:        .Weight = xlMedium
+    End With
+    With Selection.Borders(xlEdgeBottom)
+        .LineStyle = xlDouble:        .Weight = xlThick
+    End With
+End Sub
+
+Sub border()
+Selection.Borders(xlDiagonalDown).LineStyle = xlNone
+    Selection.Borders(xlDiagonalUp).LineStyle = xlNone
+    With Selection.Borders(xlEdgeLeft)
+        .LineStyle = xlContinuous:        .Weight = xlMedium
+    End With
+    With Selection.Borders(xlEdgeTop)
+        .LineStyle = xlContinuous:        .Weight = xlMedium
+    End With
+    With Selection.Borders(xlEdgeBottom)
+        .LineStyle = xlContinuous:        .Weight = xlMedium
+    End With
+    With Selection.Borders(xlEdgeRight)
+        .LineStyle = xlContinuous:        .Weight = xlMedium
+    End With
+    Selection.Borders(xlInsideVertical).LineStyle = xlNone
+    Selection.Borders(xlInsideHorizontal).LineStyle = xlNone
+End Sub
+
+Sub header()
+    With Selection.Interior
+        .Pattern = xlSolid:        .PatternColorIndex = xlAutomatic:        .Color = 6299648
+    End With
+    With Selection.Font
+        .ThemeColor = xlThemeColorDark1
+    End With
+    Selection.Font.Bold = True
+    With Selection
+        .HorizontalAlignment = xlGeneral
+        .VerticalAlignment = xlCenter
+    End With
+    With Selection
+        .HorizontalAlignment = xlCenter
+        .VerticalAlignment = xlCenter
+    End With
+   
+End Sub
