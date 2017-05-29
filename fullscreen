@@ -1,0 +1,6 @@
+Private Sub Workbook_Open()
+  ActiveWindow.WindowState = xlMaximized
+  Application.WindowState = xlMaximized
+  Application.DisplayFullScreen = True
+  Sheets("Sheet4").Select
+End Sub
