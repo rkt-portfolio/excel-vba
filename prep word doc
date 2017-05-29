@@ -1,0 +1,17 @@
+Sub Picture3_Click()
+
+Dim f_Path As String
+f_Path = Application.ActiveWorkbook.Path
+
+   Dim objWord
+
+   Dim objDoc
+
+   Set objWord = CreateObject("Word.Application")
+
+   Set objDoc = objWord.Documents.Open(f_Path & "\Instructions.docx")
+
+   objWord.Visible = True
+
+
+End Sub
