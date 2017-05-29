@@ -1,0 +1,3 @@
+Columns("I:L").Select
+
+Selection.Replace What:="#N/A", Replacement:="", LookAt:=xlPart, SearchOrder:=xlByRows, MatchCase:=False, SearchFormat:=False, ReplaceFormat:=False
